@@ -15,7 +15,6 @@ import Data.Maybe
 import Data.Array
 import Data.These
 import Control.Monad
-import System.Environment
 import System.IO.Unsafe
 
 import Mspiff.Model
@@ -73,13 +72,36 @@ screenings = toArray ((computeDeps . DL.sort) <$> loadScreenings)
   where
     computeDeps ss =
       let
-        other s s' = s /= s' && scFilmId s' == scFilmId s
-        set s = s { overlapping = fmap snd . filter overlaps . fmap (s,) $ (ss \\ [s])
-                  , otherScreening = find (other s) ss
-                  }
+        findOverlapping ss s =
+          fmap snd . filter overlaps . fmap (s,) $ (ss \\ [s])
+        findOther ss s = find (isOther s) ss
 
-      in set <$> ss
+        setDeps ss s =
+          s { overlapping = findOverlapping ss s
+            , otherScreening = findOther ss s
+            }
+        tie (a,b) acc =
+          (a {otherScreening = Just b}) : (b {otherScreening = Just a}) : acc
+        ss' = (setDeps ss) <$> ss
+        ss'' = do
+          (a:xs) <- tails ss'
+          b <- xs
+          let b' = findOther ss' a
+          guard (Just b == b')
+          return $! (a,b)
+      in foldr tie [] ss''
 
+isOther s s' = s /= s' && scFilmId s' == scFilmId s
+findOther ss s = find (isOther s) ss
+
+tie (a,b) acc =
+  (a {otherScreening = Just b}) : (b {otherScreening = Just a}) : acc
+sps = do
+  (a:xs) <- tails (elems screenings)
+  b <- xs
+  let b' = findOther screenings a
+  guard (Just b == b')
+  return $! (a,b)
 
 screeningsFor :: WholeSchedule -> Film -> [Screening]
 screeningsFor s f = sort $ filter (filt f) (scheduleScreenings s)

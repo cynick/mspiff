@@ -1,4 +1,4 @@
-module Test.SchedulerTest (tests, tests1,lastTest) where
+module Test.StateTest (tests, tests1,lastTest) where
 
 import Prelude hiding (map)
 
@@ -13,19 +13,9 @@ import Data.Array
 import Mspiff.Model
 import Mspiff.Loader
 import Mspiff.Scheduler
-import Instances
 
 at :: Assertion
 at = assertBool "" True
-
-nonempty x |DL.null x = False |otherwise = True
-
-w = Schedule (elems screenings)
-
-t' :: FilmList -> Bool
-t' (FilmList f) = nonempty (viewableSchedulesFor' w f)
-t'' :: DisjointList -> DisjointList -> Bool
-t'' (DisjointList s) (DisjointList s') = disjointLists s s' == disjointLists' s s'
 
 mt f = mapThese f f
 other = fromJust . otherScreening
@@ -43,7 +33,14 @@ s5 = ruleOutScreening s s4
 
 tests' :: [Test]
 tests' =
-    [
+    [ "testAdd<"  ~: do
+       let (msp:_) = M.elems (addScreening s M.empty)
+       mt (screeningId . screening) msp1 @?= These 325 326
+       mt status msp1 @?= These Scheduled OtherScheduled
+    , "testAdd>"  ~: do
+       let (msp:_) = M.elems (addScreening s' M.empty)
+       mt status msp1 @?= These OtherScheduled Scheduled
+       mt (screeningId . screening) msp1 @?= These 325 326
     ]
 
 tests :: Test

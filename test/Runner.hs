@@ -3,14 +3,21 @@ module Main where
 import Prelude
 import Test.HUnit
 
+import qualified Test.ModelTest
 import qualified Test.SchedulerTest
+import qualified Test.StateTest
 
 tests :: Test
 tests = TestList
-        [
---         Test.SchedulerTest.tests
+        [ Test.ModelTest.tests
+        , Test.SchedulerTest.tests
+        , Test.StateTest.tests
         ]
 
+run :: IO Counts
+run = runTestTT $ TestList [tests]
+
 main :: IO Counts
-main = runTestTT $ TestList [tests]
+main = run
+
 

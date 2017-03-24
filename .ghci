@@ -21,21 +21,18 @@ import Data.Text.Read
 import Data.Text
 import Data.Time
 import Data.Maybe
-import Hakyll hiding (match)
-import qualified Hakyll as H
-import Network.HTTP.Client
-import Text.HTML.TagSoup
-
+import Data.Array
+import Data.These
 import Mspiff.Model
 import Mspiff.Loader
 import Mspiff.Scheduler
+import Instances
 
 ts@(UTCTime d dt) <- getCurrentTime
 
 s <- DL.sort <$> loadScreenings
 
 let w = Schedule s
-let w' = Schedule (computeDeps (scheduleScreenings w))
 let s = scheduleScreenings w'
 f <- DL.sort <$> loadFilms
 let catalog = f
@@ -58,33 +55,31 @@ let f' = DL.foldr (\a b -> (fmap DL.concat . sequence $ a) : b) []
 
 let v = fmap sequence (DL.chunksOf 2 sl)
 
--- run = hakyll . match "posts/*"
-
 :def! rg (\_ -> return ":r\n:g\n")
+:def! Rg (\_ -> return ":r\n:g\n")
 
-:def! ra (\_ -> return ":set -w\n:l test/unit/Runner.hs\nrun")
-
+:def! ra (\_ -> return ":set -w\n:l test/Runner.hs\nrun")
 :def! Ra (\_ -> return ":ra")
+:def! T (\_ -> return ":t")
 
 :def! rd (\t -> (return (":def! r (\\_ -> return (\":rt " ++ t ++ "\"))")))
 
-:def! R (\_ -> return ":set -w\n:r\n:g\n")
+:def! rt (\t -> return (":m Test.HUnit\n:l test/Test/" ++ t ++ ".hs\nrunTestTT tests"))
 
-:def! rt (\_ -> return (":l test/Runner.hs\nrunTestTT tests"))
+:def! rc (\t -> return (":m Test.HUnit\n:l test/Test/" ++ t ++ ".hs\nrunTestTT tests1"))
+
+:def! rl (\t -> return (":m Test.HUnit\n:l tests/Test/" ++ t ++ ".hs\nrunTestTT lastTest"))
 
 :def! b (\_ -> return (":l src/main.hs\n:set args build\nmain"))
 :def! rb (\_ -> return (":l src/main.hs\n:set args rebuild\nmain"))
 
-let nonempty x |DL.null x = False |otherwise = True
-
-t' :: FilmList -> Bool
-t' (FilmList f) = nonempty (viewableSchedulesFor' w' f)
-t'' :: DisjointList -> DisjointList -> Bool
-t'' (DisjointList s) (DisjointList s') = disjointLists s s' == disjointLists' s s'
-
+let fs sid = fromJust $ DL.find ((==sid) . screeningId) (elems screenings)
+let s325 = fs 325
+let s326 = fs 326
 let mt f = mapThese f f
 let other = fromJust .otherScreening
 let s = DL.head $ DL.drop 100 (elems screenings)
+let s' = other s
 let s1 = addScreening s M.empty
 let s2 = addScreening (other s) s1
 let s3 = pinScreening s s2
@@ -94,6 +89,3 @@ let (msp1:_) = M.elems s1
 let (msp2:_) = M.elems s2
 let (msp3:_) = M.elems s3
 let (msp4:_) = M.elems s4
-
-
-

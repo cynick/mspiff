@@ -1,0 +1,99 @@
+:set +s
+:set +t
+:set -W
+:set -XOverloadedStrings
+:set editor ec
+:set prompt "λ: "
+:def! . readFile
+:def! g (\_ -> return ":. .ghci\n")
+
+:set -Wall
+
+import qualified Data.List as DL
+import Data.List.Split
+import qualified Data.Map.Strict as M
+import qualified Data.List.Split as DL
+import qualified Control.Monad.Logic as L
+import Data.Word
+import Text.Printf
+import Data.Either
+import Data.Text.Read
+import Data.Text
+import Data.Time
+import Data.Maybe
+import Hakyll hiding (match)
+import qualified Hakyll as H
+import Network.HTTP.Client
+import Text.HTML.TagSoup
+
+import Mspiff.Model
+import Mspiff.Loader
+import Mspiff.Scheduler
+
+ts@(UTCTime d dt) <- getCurrentTime
+
+s <- DL.sort <$> loadScreenings
+
+let w = Schedule s
+let w' = Schedule (computeDeps (scheduleScreenings w))
+let s = scheduleScreenings w'
+f <- DL.sort <$> loadFilms
+let catalog = f
+let (f0:f1:f2:f3:f4:f5:f6:f7:f8:f9:_) = f
+let (s0:s1:s2:s3:s4:s5:s6:s7:s8:s9:_) = s
+let scs@(sc1:sc2:sc3:_) = viewableSchedulesFor w (DL.take 10 f)
+let s' = DL.concat $ fmap scheduleScreenings $ DL.take 1 $ viewableSchedulesFor w (DL.take 20 f)
+let p = mapM_ print
+
+let qc = quickCheckWith stdArgs { maxSuccess = 5000 }
+let vc = verboseCheckWith stdArgs { maxSuccess = 5000 }
+let hist v = DL.foldl' (\(a,b) v' -> if v' == v then (a+1,b) else (a,b+1)) (0,0)
+let toIds t = fmap (fmap (fmap screeningId)) $ t
+let toSt t = fmap (fmap (fmap showtime)) $ t
+let sl = screeningListsFor w (DL.take 10 f)
+let slc = DL.chunksOf 2 sl
+let r = DL.take 3 . DL.filter disjoint . sequence
+let toUtc = posixSecondsToUTCTime . fromIntegral . showtime
+let f' = DL.foldr (\a b -> (fmap DL.concat . sequence $ a) : b) []
+
+let v = fmap sequence (DL.chunksOf 2 sl)
+
+-- run = hakyll . match "posts/*"
+
+:def! rg (\_ -> return ":r\n:g\n")
+
+:def! ra (\_ -> return ":set -w\n:l test/unit/Runner.hs\nrun")
+
+:def! Ra (\_ -> return ":ra")
+
+:def! rd (\t -> (return (":def! r (\\_ -> return (\":rt " ++ t ++ "\"))")))
+
+:def! R (\_ -> return ":set -w\n:r\n:g\n")
+
+:def! rt (\_ -> return (":l test/Runner.hs\nrunTestTT tests"))
+
+:def! b (\_ -> return (":l src/main.hs\n:set args build\nmain"))
+:def! rb (\_ -> return (":l src/main.hs\n:set args rebuild\nmain"))
+
+let nonempty x |DL.null x = False |otherwise = True
+
+t' :: FilmList -> Bool
+t' (FilmList f) = nonempty (viewableSchedulesFor' w' f)
+t'' :: DisjointList -> DisjointList -> Bool
+t'' (DisjointList s) (DisjointList s') = disjointLists s s' == disjointLists' s s'
+
+let mt f = mapThese f f
+let other = fromJust .otherScreening
+let s = DL.head $ DL.drop 100 (elems screenings)
+let s1 = addScreening s M.empty
+let s2 = addScreening (other s) s1
+let s3 = pinScreening s s2
+let s4 = pinScreening (fromJust (otherScreening s)) s3
+let s5 = ruleOutScreening s s4
+let (msp1:_) = M.elems s1
+let (msp2:_) = M.elems s2
+let (msp3:_) = M.elems s3
+let (msp4:_) = M.elems s4
+
+
+

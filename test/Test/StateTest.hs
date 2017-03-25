@@ -19,7 +19,7 @@ at = assertBool "" True
 
 mt f = mapThese f f
 other = fromJust . otherScreening
-s = DL.head $ DL.drop 100 (elems screenings)
+s = DL.head $ DL.drop 100 screenings
 s' = other s
 s1 = addScreening s M.empty
 s2 = addScreening s' s1

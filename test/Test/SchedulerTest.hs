@@ -129,9 +129,23 @@ tests' =
          st = addScreening s (addScreening s0 M.empty)
          (st',Just (Schedule [a,b])) = viewableScheduleFor w st
        st' @?= st
-       print "Asd"
-       print a
---       [a,b] @?= [s,s0]
+       print b
+       [b,a] @?= [s,s0]
+    , "testScheduleFourOverlapping" ~: do
+       let
+         sids = [293,115,265,57]
+         st = foldr (\sid st -> addScreening (fs sid) st) M.empty sids
+         (st',Just (Schedule s)) = viewableScheduleFor w st
+       st' @?= st
+       print s
+    , "testScheduleFourOverlappingWithOneRuledOut" ~: do
+       let
+         sids = [293,115,265,57]
+         st = foldr (\sid st -> addScreening (fs sid) st) M.empty sids
+         st' = ruleOutScreening (fs 56) st
+         (st'',Just (Schedule s)) = viewableScheduleFor w st'
+       st'' @?= st'
+       print s
     ]
 
 tests :: Test

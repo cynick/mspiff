@@ -13,23 +13,25 @@ import Data.Array
 import Mspiff.Model
 import Mspiff.Loader
 import Mspiff.Scheduler
-import Instances
+import TestUtil
 
 at :: Assertion
 at = assertBool "" True
 
 nonempty x |DL.null x = False |otherwise = True
 
-w = Schedule (elems screenings)
+w = Schedule screenings
 
+{-    
 t' :: FilmList -> Bool
 t' (FilmList f) = nonempty (viewableSchedulesFor' w f)
 t'' :: DisjointList -> DisjointList -> Bool
 t'' (DisjointList s) (DisjointList s') = disjointLists s s' == disjointLists' s s'
+-}
 
 mt f = mapThese f f
 other = fromJust . otherScreening
-s = DL.head $ DL.drop 100 (elems screenings)
+s = DL.head $ DL.drop 100 screenings
 s' = other s
 s1 = addScreening s M.empty
 s2 = addScreening s' s1

@@ -14,20 +14,15 @@ import Control.Monad
 import Mspiff.Model
 import Mspiff.Loader
 import Mspiff.Scheduler
-import Instances
+import TestUtil
 
 at :: Assertion
 at = assertBool "" True
 
-fs sid = fromJust $ DL.find ((==sid) . screeningId) screenings
-s325 = fs 325
-s326 = fs 326
-s288 = fs 288
-
 tests' :: [Test]
 tests' =
     [ "testCyclicOther" ~:
-      join (otherScreening <$> (otherScreening s326)) @?= Just s326
+      join (otherScreening <$> otherScreening s326) @?= Just s326
     ]
 
 tests :: Test

@@ -1,8 +1,8 @@
-
 module Mspiff.Model where
 
 import Prelude
 
+import Data.Aeson hiding (Array)
 import qualified Data.Text as T
 
 import Data.Time
@@ -25,6 +25,15 @@ data Film = Film
 
 instance Eq Film where
   a == b = filmId a == filmId b
+
+instance FromJSON Film where
+  parseJSON (Object v) =
+    Film <$>
+      v .: "filmId" <*>
+      v .: "filmTitle" <*>
+      pure []
+
+  parseJSON _ = error "invalid film json"
 
 data ScreeningStatus =
   Unscheduled | Scheduled | Impossible | RuledOut | OtherScheduled
@@ -51,6 +60,19 @@ instance Ord Screening where
       GT -> GT
       EQ -> screen a `compare` screen b
 
+instance FromJSON Screening where
+  parseJSON (Object v) =
+    Screening <$>
+      v .: "scFilmId" <*>
+      v .: "screeningId" <*>
+      pure [] <*>
+      pure Nothing <*>
+      v .: "screeningTime" <*> -- seconds since Epoch
+      ((60*) <$> v .: "duration" ) <*> -- duration is given in minutes
+      v .: "screen"
+
+  parseJSON _ = error "invalid screening json"
+
 data Pinned = Pinned | Unpinned deriving (Show,Eq)
 data MarkedScreening = MarkedScreening
   { status :: ScreeningStatus
@@ -67,6 +89,9 @@ isRuledOut = (==RuledOut) . status
 
 isPinned :: MarkedScreening -> Bool
 isPinned = (==Pinned) . pinned
+
+isOther :: Screening -> Screening -> Bool
+isOther s s' = s /= s' && scFilmId s' == scFilmId s
 
 newtype Schedule = Schedule { scheduleScreenings :: [Screening] }
   deriving (Eq,Show,Monoid)

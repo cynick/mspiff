@@ -36,8 +36,8 @@ type Pair a = These a a
 type ScreeningPair = Pair Screening
 type MarkedScreeningPair = Pair MarkedScreening
 
-mkScreeningPair :: Screening -> ScreeningPair
-mkScreeningPair = ap go otherScreening
+mkScreeningPair :: Screening -> Maybe Screening -> ScreeningPair
+mkScreeningPair = go
   where
     go a Nothing = This a
     go a (Just b) =
@@ -61,7 +61,7 @@ isSecond :: Screening -> ScreeningPair -> Bool
 isSecond s sp = isThese sp && (snd <$> justThese sp) == Just s
 
 keyFor :: Screening -> ScreeningPair
-keyFor = mkScreeningPair
+keyFor s = mkScreeningPair s (otherScreening s)
 
 mkMsp ::
   (t2 -> t1 -> t) ->
@@ -79,7 +79,6 @@ addScreening s st =
     k = keyFor s
     ms = MarkedScreening Scheduled Unpinned
     ms' = MarkedScreening OtherScheduled Unpinned
-
     v | isThis k = This (ms s)
       | isFirst s k = mkMsp These s ms ms'
       | otherwise = mkMsp (flip These) s ms ms'
@@ -96,10 +95,10 @@ ruleOutScreening s st =
     ms' = MarkedScreening Scheduled Pinned
     v | isThis k = This (ms s)
       | isFirst s k = mkMsp These s ms ms'
-      | otherwise = error "asd" -- mkMsp (flip These) s ms ms'
+      | otherwise = mkMsp (flip These) s ms ms'
     -- If the other screening was already ruled out, we leave it that
     -- way.
-    f old new | isFirst s k && isRuledOut (second old) =
+    f new old | isFirst s k && isRuledOut (second old) =
                   let s' = screening (second old) in These (ms s) (ms s')
               | isSecond s k && isRuledOut (first old) =
                   let s' = screening (first old) in These (ms s') (ms s)

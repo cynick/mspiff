@@ -3,6 +3,7 @@ module TestUtil where
 
 import qualified Data.List as DL
 import Test.QuickCheck hiding (Success)
+import Data.Maybe
 
 import Mspiff.Model
 import Mspiff.Loader
@@ -52,3 +53,11 @@ getOneDisjoint :: Gen [ArbScreening]
 getOneDisjoint = do
   l <- arbitraryDistinctList 20
   if disjoint (unArb <$> l) then return l else getOneDisjoint
+
+fs :: ScreeningId -> Screening
+fs sid = fromJust $ DL.find ((==sid) . screeningId) screenings
+s325, s326, s288 :: Screening
+s325 = fs 325
+s326 = fs 326
+s288 = fs 288
+

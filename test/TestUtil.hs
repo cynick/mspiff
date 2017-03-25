@@ -1,19 +1,20 @@
 
-module Instances where
+module TestUtil where
 
 import qualified Data.List as DL
-import Data.Array
 import Test.QuickCheck hiding (Success)
 
 import Mspiff.Model
 import Mspiff.Loader
 import Mspiff.Scheduler
 
-instance Arbitrary Film
+newtype ArbFilm = ArbFilm Film deriving (Show, Eq)
+
+instance Arbitrary ArbFilm
   where
     arbitrary = do
       i <- choose (0, length films - 1)
-      return (films !! i)
+      return $ ArbFilm (films !! i)
 
 arbitraryDistinctList :: (Arbitrary a, Eq a) => Int -> Gen [a]
 arbitraryDistinctList count = do
@@ -28,25 +29,26 @@ arbitraryDistinctList count = do
         else build (c -1) (f:list)
   build (min count (DL.length films)) []
 
-newtype FilmList = FilmList {fromFilmList :: [Film]} deriving Show
+newtype FilmList = FilmList {fromFilmList :: [ArbFilm]} deriving Show
 instance Arbitrary FilmList
   where
     arbitrary = FilmList <$> arbitraryDistinctList 20
 
-newtype DisjointList = DisjointList {fromScreeningList :: [Screening]}
+newtype ArbScreening = ArbScreening {unArb :: Screening} deriving (Eq, Show)
+newtype DisjointList = DisjointList {fromScreeningList :: [ArbScreening]}
   deriving Show
-
-getOneDisjoint :: Gen [Screening]
-getOneDisjoint = do
-  l <- arbitraryDistinctList 20
-  if disjoint l then return l else getOneDisjoint
 
 instance Arbitrary DisjointList
   where
     arbitrary = DisjointList <$> getOneDisjoint
 
-instance Arbitrary Screening
+instance Arbitrary ArbScreening
   where
     arbitrary = do
       i <- choose (0, length screenings - 1)
-      return (screenings !! i)
+      return $ ArbScreening (screenings !! i)
+
+getOneDisjoint :: Gen [ArbScreening]
+getOneDisjoint = do
+  l <- arbitraryDistinctList 20
+  if disjoint (unArb <$> l) then return l else getOneDisjoint

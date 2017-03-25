@@ -126,38 +126,40 @@ pinScreening s st =
 updateSchedule ::
   Catalog ->
   WholeSchedule ->
-  [MarkedScreening] -> [MarkedScreening]
-updateSchedule cat ws mss = ret
+  ScheduleState -> ScheduleState
+updateSchedule cat ws st = ret
   where
     schedule = viewableScheduleFor ws ms
     missed = maybe [] (filmsMissedBy cat ws) schedule
     screeningsOfMissed = concatMap filmScreenings missed
     ret = maybe ms rebuild schedule
     rebuild ms = DL.foldl' update [] mss
-    update a m =
-      case () of
-       markedScreening ms `DL.elem` schedule = ms : a
-       markedScreening ms `DL.notElem` schedule = ms { status
 -}
 
-{-
+
 viewableScheduleFor ::
   WholeSchedule ->
-  [MarkedScreening] ->
-  Maybe ViewableSchedule
-viewableScheduleFor ws mss = Schedule <$> (listToMaybe schedules)
+  ScheduleState ->
+  (ScheduleState, Maybe ViewableSchedule)
+viewableScheduleFor ws st = (st, Schedule <$> schedule)
   where
+    schedule = listToMaybe schedules
     schedules = filter (not . null) . filter disjoint . sequence $ lists
-    screeningListFor ms lists =
-      let
-        screening' = screening ms
-        list = [screening]
-        ret | pinned ms == Pinned = list
-            | otherwise = maybe list (:list) (otherScreening screening')
-      in ret : lists
+    screeningListFor msp ss = ret : ss
+      where
+        ret =
+          case msp of
+            This ms -> [screening ms | status ms == Scheduled]
+            These ms1 ms2 -> handle ms1 ms2
+            _ -> []
+        schedulable = [Scheduled,OtherScheduled]
+        handle (MarkedScreening st1 _ s1) (MarkedScreening st2 _ s2)
+          | st1 `elem` schedulable && st2 `elem` schedulable = [s1,s2]
+          | st1 `elem` schedulable = [s1]
+          | st2 `elem` schedulable = [s2]
+          | otherwise = []
+    lists = foldr screeningListFor [] (M.elems st)
 
-    lists = foldr screeningListFor [] mss
--}
 
 viewableSchedulesFor :: WholeSchedule -> [Film] -> [ViewableSchedule]
 viewableSchedulesFor ws fs =

@@ -35,10 +35,6 @@ instance FromJSON Film where
 
   parseJSON _ = error "invalid film json"
 
-data ScreeningStatus =
-  Unscheduled | Scheduled | Impossible | RuledOut | OtherScheduled
-  deriving (Enum, Show, Eq)
-
 data Screening = Screening
   { scFilmId :: FilmId
   , screeningId :: ScreeningId
@@ -48,7 +44,7 @@ data Screening = Screening
   , duration :: Duration
   , screen :: Screen
   }
-  deriving (Show)
+  deriving Show
 
 instance Eq Screening where
   a == b = screeningId a == screeningId b
@@ -74,6 +70,9 @@ instance FromJSON Screening where
   parseJSON _ = error "invalid screening json"
 
 data Pinned = Pinned | Unpinned deriving (Show,Eq)
+data ScreeningStatus =
+  Unscheduled | Scheduled | Impossible | RuledOut | OtherScheduled
+  deriving (Enum, Show, Eq)
 data MarkedScreening = MarkedScreening
   { status :: ScreeningStatus
   , pinned :: Pinned

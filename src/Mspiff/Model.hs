@@ -7,6 +7,7 @@ import qualified Data.Text as T
 
 import Data.Time
 import Data.Time.Clock.POSIX
+import Data.Monoid
 
 type FilmId = Int
 type ScreeningId = Int
@@ -44,7 +45,16 @@ data Screening = Screening
   , duration :: Duration
   , screen :: Screen
   }
-  deriving Show
+
+instance Show Screening where
+  show s = "Screening {scFilmId = " <> show (scFilmId s) <>
+           ", screeningId = " <> show (screeningId s) <>
+           ", overlapping = " <> show (screeningId <$> overlapping s) <>
+           ", otherScreening = " <> show (screeningId <$> otherScreening s) <>
+           ", showtime = " <> show (showtime s) <>
+           ", duration = " <> show (duration s) <>
+           ", screen = " <> show (screen s) <>
+           "}"
 
 instance Eq Screening where
   a == b = screeningId a == screeningId b

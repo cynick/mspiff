@@ -5,7 +5,7 @@
 :set editor ec
 :set prompt "λ: "
 :def! . readFile
-:def! g (\_ -> return ":. .ghci\n")
+:def! g (\_ -> return ":set -w\n:. .ghci\n")
 
 :set -Wall
 
@@ -13,27 +13,25 @@ import qualified Data.List as DL
 import Data.List.Split
 import qualified Data.Map.Strict as M
 import qualified Data.List.Split as DL
-import qualified Control.Monad.Logic as L
 import Data.Word
 import Text.Printf
 import Data.Either
 import Data.Text.Read
 import Data.Text
 import Data.Time
+import Data.Time.Clock.POSIX
 import Data.Maybe
 import Data.Array
 import Data.These
 import Mspiff.Model
 import Mspiff.Loader
 import Mspiff.Scheduler
-import Instances
+import Test.QuickCheck
 
 ts@(UTCTime d dt) <- getCurrentTime
 
-s <- DL.sort <$> loadScreenings
-
-let w = Schedule s
-let s = scheduleScreenings w'
+let w = Schedule screenings
+let s = screenings
 f <- DL.sort <$> loadFilms
 let catalog = f
 let (f0:f1:f2:f3:f4:f5:f6:f7:f8:f9:_) = f
@@ -65,29 +63,12 @@ let v = fmap sequence (DL.chunksOf 2 sl)
 :def! rd (\t -> (return (":def! r (\\_ -> return (\":rt " ++ t ++ "\"))")))
 
 :def! rt (\t -> return (":m Test.HUnit\n:l test/Test/" ++ t ++ ".hs\nrunTestTT tests"))
+let rc s = let [t,i] = DL.words s in ":m Test.HUnit\n:l test/Test/" ++ t ++ ".hs\nrunTestTT (tests1 " ++ i ++ ")"
+:def! rc (return . rc)
 
-:def! rc (\t -> return (":m Test.HUnit\n:l test/Test/" ++ t ++ ".hs\nrunTestTT tests1"))
 
-:def! rl (\t -> return (":m Test.HUnit\n:l tests/Test/" ++ t ++ ".hs\nrunTestTT lastTest"))
+:def! rl (\t -> return (":m Test.HUnit\n:l test/Test/" ++ t ++ ".hs\nrunTestTT lastTest"))
 
 :def! b (\_ -> return (":l src/main.hs\n:set args build\nmain"))
 :def! rb (\_ -> return (":l src/main.hs\n:set args rebuild\nmain"))
 
-let fs sid = fromJust $ DL.find ((==sid) . screeningId) (elems screenings)
-let s325 = fs 325
-let s326 = fs 326
-let s288 = fs 288
-let mt f = mapThese f f
-let other = fromJust .otherScreening
-let ss = elems screenings
-let s = DL.head $ DL.drop 100 ss
-let s' = other s
-let s1 = addScreening s M.empty
-let s2 = addScreening (other s) s1
-let s3 = pinScreening s s2
-let s4 = pinScreening (fromJust (otherScreening s)) s3
-let s5 = ruleOutScreening s s4
-let (msp1:_) = M.elems s1
-let (msp2:_) = M.elems s2
-let (msp3:_) = M.elems s3
-let (msp4:_) = M.elems s4

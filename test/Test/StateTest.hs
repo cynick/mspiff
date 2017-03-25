@@ -92,6 +92,32 @@ tests' =
        mt (screeningId . screening) msp1 @?= This 288
        mt status msp2 @?= These Scheduled OtherScheduled
        mt (screeningId . screening) msp2 @?= These 325 326
+    , "testRuleOut<"  ~: do
+       let (msp1:_) = M.elems (ruleOutScreening s (addScreening s M.empty))
+       mt status msp1 @?= These RuledOut Scheduled
+       mt pinned msp1 @?= These Unpinned Pinned
+       mt (screeningId . screening) msp1 @?= These 325 326
+    , "testRuleOut>"  ~: do
+       let (msp1:_) = M.elems (ruleOutScreening s' (addScreening s' M.empty))
+       mt status msp1 @?= These Scheduled RuledOut
+       mt pinned msp1 @?= These Pinned Unpinned
+       mt (screeningId . screening) msp1 @?= These 325 326
+    , "testRuleOutBoth"  ~: do
+       let (msp1:_) = M.elems (ruleOutScreening s (ruleOutScreening s' (addScreening s M.empty)))
+       mt status msp1 @?= These RuledOut RuledOut
+       mt pinned msp1 @?= These Unpinned Unpinned
+       mt (screeningId . screening) msp1 @?= These 325 326
+    , "testPin<"  ~: do
+       let (msp1:_) = M.elems (pinScreening s (addScreening s M.empty))
+       mt status msp1 @?= These Scheduled RuledOut
+       mt pinned msp1 @?= These Pinned Unpinned
+       mt (screeningId . screening) msp1 @?= These 325 326
+    , "testPin>"  ~: do
+       let (msp1:_) = M.elems (pinScreening s' (addScreening s' M.empty))
+       mt status msp1 @?= These RuledOut Scheduled
+       mt pinned msp1 @?= These Unpinned Pinned
+       mt (screeningId . screening) msp1 @?= These 325 326
+
     ]
 
 tests :: Test

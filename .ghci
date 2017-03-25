@@ -76,9 +76,11 @@ let v = fmap sequence (DL.chunksOf 2 sl)
 let fs sid = fromJust $ DL.find ((==sid) . screeningId) (elems screenings)
 let s325 = fs 325
 let s326 = fs 326
+let s288 = fs 288
 let mt f = mapThese f f
 let other = fromJust .otherScreening
-let s = DL.head $ DL.drop 100 (elems screenings)
+let ss = elems screenings
+let s = DL.head $ DL.drop 100 ss
 let s' = other s
 let s1 = addScreening s M.empty
 let s2 = addScreening (other s) s1

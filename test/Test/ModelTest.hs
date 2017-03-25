@@ -19,14 +19,15 @@ import Instances
 at :: Assertion
 at = assertBool "" True
 
-fs sid = fromJust $ DL.find ((==sid) . screeningId) (elems screenings)
+fs sid = fromJust $ DL.find ((==sid) . screeningId) screenings
 s325 = fs 325
 s326 = fs 326
+s288 = fs 288
 
 tests' :: [Test]
 tests' =
-    ["testCyclicOther" ~:
-      join (fmap otherScreening (otherScreening s325)) @?= Just s325
+    [ "testCyclicOther" ~:
+      join (otherScreening <$> (otherScreening s326)) @?= Just s326
     ]
 
 tests :: Test

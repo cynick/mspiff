@@ -13,7 +13,7 @@ instance Arbitrary Film
   where
     arbitrary = do
       i <- choose (0, length films - 1)
-      return (films ! i)
+      return (films !! i)
 
 arbitraryDistinctList :: (Arbitrary a, Eq a) => Int -> Gen [a]
 arbitraryDistinctList count = do
@@ -49,4 +49,4 @@ instance Arbitrary Screening
   where
     arbitrary = do
       i <- choose (0, length screenings - 1)
-      return (screenings ! i)
+      return (screenings !! i)

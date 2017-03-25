@@ -4,20 +4,9 @@ module Mspiff.Model where
 import Prelude
 
 import qualified Data.Text as T
-import qualified Data.ByteString.Lazy as BS
-import qualified Data.Map.Strict as M
-import Data.Aeson hiding (Array)
-import Data.List
-import Data.List.Split
+
 import Data.Time
 import Data.Time.Clock.POSIX
-import qualified Data.List as DL
-import Data.Maybe
-import Data.Array
-import Data.These
-import Control.Monad
-import System.Environment
-import System.IO.Unsafe
 
 type FilmId = Int
 type ScreeningId = Int

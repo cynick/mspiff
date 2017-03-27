@@ -112,7 +112,7 @@ type ViewableSchedule = Schedule
 type Catalog = [Film]
 
 showtimeToUtc :: Screening -> UTCTime
-showtimeToUtc = posixSecondsToUTCTime . fromIntegral . (+(6*3600)) . showtime
+showtimeToUtc = posixSecondsToUTCTime . fromIntegral . showtime
 
 
 

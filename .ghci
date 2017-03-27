@@ -13,25 +13,35 @@ import qualified Data.List as DL
 import Data.List.Split
 import qualified Data.Map.Strict as M
 import qualified Data.List.Split as DL
+import qualified Data.List.NonEmpty as NE
 import Data.Word
 import Text.Printf
 import Data.Either
 import Data.Text.Read
 import Data.Text
 import Data.Time
+import Data.Function
+import Data.List.NonEmpty
 import Data.Time.Clock.POSIX
 import Data.Maybe
 import Data.Array
 import Data.These
+
+import qualified Data.Text.Lazy.IO as T
+import Test.QuickCheck
+import Lucid
 import Mspiff.Model
 import Mspiff.Loader
 import Mspiff.Scheduler
-import Test.QuickCheck
+import Mspiff.Html
+
 
 ts@(UTCTime d dt) <- getCurrentTime
-
+let html = renderToFile "t.html"
 let w = Schedule screenings
 let s = screenings
+let ss = screenings
+let Schedule d3 = (partitionByDay w) DL.!! 3
 f <- DL.sort <$> loadFilms
 let catalog = f
 let (f0:f1:f2:f3:f4:f5:f6:f7:f8:f9:_) = f

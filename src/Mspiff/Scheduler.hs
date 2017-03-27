@@ -22,16 +22,6 @@ import System.IO.Unsafe
 import Mspiff.Model
 import Mspiff.Loader
 
-partitionByDay :: WholeSchedule -> [DaySchedule]
-partitionByDay (Schedule s) = fmap Schedule $ reverse $ go s [] []
-  where
-    go [] curr ret = curr:ret
-    go (x:xs) [] ret = go xs [x] ret
-    go (x:xs) ys ret =
-      if dayOf (last ys) /= dayOf x
-       then go xs [x] (ys:ret)
-       else go xs (x:ys) ret
-
 type Pair a = These a a
 type ScreeningPair = Pair Screening
 type MarkedScreeningPair = Pair MarkedScreening
@@ -46,7 +36,6 @@ mkScreeningPair = go
         GT -> These b a
         EQ -> error "attempt to construct screening pair with a single film"
 
-type ScheduleState = M.Map ScreeningPair MarkedScreeningPair
 
 first :: MarkedScreeningPair -> MarkedScreening
 first sp = fromJust (fst <$> justThese sp)
@@ -69,6 +58,8 @@ mkMsp ::
   (Screening -> t2) ->
   (Screening -> t1) -> t
 mkMsp f s ms ms' = f (ms s) (ms' (fromJust (otherScreening s)))
+
+type ScheduleState = M.Map ScreeningPair MarkedScreeningPair
 
 addScreening ::
   Screening ->
@@ -98,11 +89,12 @@ ruleOutScreening s st =
       | otherwise = mkMsp (flip These) s ms ms'
     -- If the other screening was already ruled out, we leave it that
     -- way.
-    f new old | isFirst s k && isRuledOut (second old) =
-                  let s' = screening (second old) in These (ms s) (ms s')
-              | isSecond s k && isRuledOut (first old) =
-                  let s' = screening (first old) in These (ms s') (ms s)
-              | otherwise = new
+    f new old
+      | isFirst s k && isRuledOut (second old) =
+          let s' = screening (second old) in These (ms s) (ms s')
+      | isSecond s k && isRuledOut (first old) =
+          let s' = screening (first old) in These (ms s') (ms s)
+      | otherwise = new
   in M.insertWith f k v st
 
 removeFilm :: Screening -> ScheduleState -> ScheduleState
@@ -121,6 +113,12 @@ pinScreening s st =
       | isFirst s k = mkMsp These s ms ms'
       | otherwise = mkMsp (flip These) s ms ms'
   in M.insert k v st
+
+unPinScreening ::
+  Screening ->
+  ScheduleState ->
+  ScheduleState
+unPinScreening = addScreening
 
 {-
 updateSchedule ::
@@ -180,7 +178,7 @@ viewableSchedulesFor' ws fs = map Schedule $ filter (not.null) $ DL.concat $ red
       in if disjointLists x y
            then r
            else []
-
+    stitch _ = error "expected to be stitching only lists of one or two elements"
     start = (filter disjoint . sequence) <$> chunksOf 2 (screeningListsFor ws fs)
     reduce :: [[[Screening]]] -> [[[Screening]]]
     reduce [] = []

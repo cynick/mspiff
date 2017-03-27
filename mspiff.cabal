@@ -44,17 +44,20 @@ library
                    , array
                    , monad-loops
                    , these
+                   , ListZipper ==1.2.0.2
+                   , lucid
 
     exposed-modules:   Mspiff.Model
                      , Mspiff.Loader
                      , Mspiff.Scheduler
+                     , Mspiff.Html
     default-language:    Haskell2010
     default-extensions: OverloadedStrings
                       , FlexibleContexts
                       , GeneralizedNewtypeDeriving
                       , TupleSections
                       , TemplateHaskell
-
+                      , ExtendedDefaultRules
 test-suite test
     type:              exitcode-stdio-1.0
     main-is:           Runner.hs
@@ -66,12 +69,14 @@ test-suite test
                   , Mspiff.Loader
                   , Mspiff.Model
                   , Mspiff.Scheduler
+                  , Mspiff.Html
 
     default-extensions: OverloadedStrings
                       , FlexibleContexts
                       , GeneralizedNewtypeDeriving
                       , TupleSections
                       , TemplateHaskell
+                      , ExtendedDefaultRules
     build-depends:   base >=4.9 && <4.10
                    , mspiff
                    , mtl
@@ -85,3 +90,6 @@ test-suite test
                    , time
                    , array
                    , these
+                   , ListZipper ==1.2.0.2
+                   , lucid
+

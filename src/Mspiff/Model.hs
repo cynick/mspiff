@@ -107,12 +107,12 @@ newtype Schedule = Schedule { scheduleScreenings :: [Screening] }
 
 type WholeSchedule = Schedule
 type DaySchedule = Schedule
+type VenueSchedule = Schedule
 type ViewableSchedule = Schedule
 type Catalog = [Film]
 
 showtimeToUtc :: Screening -> UTCTime
-showtimeToUtc = posixSecondsToUTCTime . fromIntegral . showtime
+showtimeToUtc = posixSecondsToUTCTime . fromIntegral . (+(6*3600)) . showtime
 
-dayOf :: Screening -> Day
-dayOf = utctDay . showtimeToUtc
+
 

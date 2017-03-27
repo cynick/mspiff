@@ -63,13 +63,13 @@ films0 = computeDeps (loadList loadFilms)
         set f = f { filmScreenings = screeningsFor schedule f }
       in set <$> fs
 
-filmOf :: Screening -> Film
-filmOf s = fromJust $ DL.find (\f -> filmId f == scFilmId s) films0
+filmOf_ :: Screening -> Film
+filmOf_ s = fromJust $ DL.find (\f -> filmId f == scFilmId s) films0
 
 screenings :: [Screening]
 screenings = DL.sort $ DL.nub $ foldr tie [] screenings0
   where
-    findOtherScreening s = find (isOther s) (filmScreenings (filmOf s))
+    findOtherScreening s = find (isOther s) (filmScreenings (filmOf_ s))
     tie s acc
       | s `elem` acc = acc
       | otherwise =
@@ -85,6 +85,10 @@ films = set <$> films0
   where
     schedule = Schedule screenings
     set f = f { filmScreenings = screeningsFor schedule f }
+
+filmOf :: Screening -> Film
+
+filmOf s = fromJust $ DL.find (\f -> filmId f == scFilmId s) films
 
 screeningsFor :: WholeSchedule -> Film -> [Screening]
 screeningsFor s f = sort $ filter (filt f) (scheduleScreenings s)

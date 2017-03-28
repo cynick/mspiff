@@ -115,10 +115,11 @@ One page:
     - update state
     - redraw
 
-On click, updateSchedule.
-updateSchedule ::
-  Catalog ->
-  WholeSchedule ->
-  [MarkedScreening] ->
-  ([MarkedScreening], [Film])
+
+In Haskell:
+ use Lucid to render the DOM
+ use JQuery to register events
+ event handlers update state via mvar
+ another thread reads the mvar and kicks off another
+   thread to perform the update.
 

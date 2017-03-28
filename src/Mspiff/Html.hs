@@ -43,7 +43,11 @@ renderWholeSchedule (Schedule ss) = header >> body_ body
            , style_ "visibility: hidden"
            ] renderDays
     timelineContainer =
-      row_ [ id_ "timelines" ] renderTimelines
+      row_ [ id_ "timelines"
+--           , class_ "zoomTarget"
+           , at "data-targetsize" "0.50"
+           , at "data-closeclick" "true"
+           ] renderTimelines
     renderTimelines = mapM_ renderDayTimeline [1.. DL.length days]
     renderDayTimeline :: Int -> Html ()
     renderDayTimeline d =
@@ -63,6 +67,7 @@ header = head_ $ do
   script "http://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"
 
   script "http://local.hoffmanavenuesoftware.com/js/bootstrap.min.js"
+  script "http://local.hoffmanavenuesoftware.com/js/zoomooz.min.js"
   script "https://cdnjs.cloudflare.com/ajax/libs/jquery-easing/1.3/jquery.easing.min.js"
 
   link_ [ href_ "http://local.hoffmanavenuesoftware.com/css/bootstrap.min.css"
@@ -103,7 +108,7 @@ renderScreening :: Screening -> Html ()
 renderScreening s = do
   let
     startTime = showtimeToUtc s
-    utcToText = T.pack . formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S"
+    utcToText = T.pack . formatTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S"
   div_ [ class_ "screening"
        , id_ ("screening-" <> toText (screeningId s))
        , at "data-start" (utcToText startTime)
@@ -113,12 +118,12 @@ renderScreening s = do
     control
 
 icon :: T.Text -> Html ()
-icon c = i_ [class_ c] ""
+icon c = i_ [class_ ("fa icon-resize-small" <> " " <> c)] ""
 
 control :: Html ()
 control =
   div_ [class_ "control icon-bar"] $ do
     a_ [class_ "active", href_ "#"] $ icon "fa fa-plus"
-    a_ [href_ "#"] $ icon "fa fa-minus"
-    a_ [href_ "#"] $ icon "fa fa-circle-o"
-    a_ [href_ "#"] $ icon "fa fa-times"
+    a_ [href_ "#"] $ icon "fa-minus"
+    a_ [href_ "#"] $ icon "fa-circle-o"
+    a_ [href_ "#"] $ icon "fa-times"

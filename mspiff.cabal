@@ -46,7 +46,11 @@ library
                    , these
                    , ListZipper ==1.2.0.2
                    , lucid
-
+                   , tagsoup
+                   , http-client
+                   , conduit
+                   , uri-encode
+                   
     exposed-modules:   Mspiff.Model
                      , Mspiff.Loader
                      , Mspiff.Scheduler
@@ -92,4 +96,7 @@ test-suite test
                    , these
                    , ListZipper ==1.2.0.2
                    , lucid
-
+                   , tagsoup
+                   , http-client
+                   , conduit
+                   , uri-encode

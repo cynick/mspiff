@@ -87,7 +87,6 @@ films = set <$> films0
     set f = f { filmScreenings = screeningsFor schedule f }
 
 filmOf :: Screening -> Film
-
 filmOf s = fromJust $ DL.find (\f -> filmId f == scFilmId s) films
 
 screeningsFor :: WholeSchedule -> Film -> [Screening]

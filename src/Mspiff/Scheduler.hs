@@ -3,21 +3,14 @@ module Mspiff.Scheduler where
 
 import Prelude
 
-import qualified Data.Text as T
-import qualified Data.ByteString.Lazy as BS
 import qualified Data.Map.Strict as M
-import Data.Aeson hiding (Array)
 import Data.List
 import Data.List.Split
 import Data.Time
 import Data.Time.Clock.POSIX
 import qualified Data.List as DL
 import Data.Maybe
-import Data.Array
 import Data.These
-import Control.Monad
-import System.Environment
-import System.IO.Unsafe
 
 import Mspiff.Model
 import Mspiff.Loader
@@ -139,7 +132,7 @@ viewableScheduleFor ::
   WholeSchedule ->
   ScheduleState ->
   (ScheduleState, Maybe ViewableSchedule)
-viewableScheduleFor ws st = (st, Schedule <$> schedule)
+viewableScheduleFor _ st = (st, Schedule <$> schedule)
   where
     schedule = listToMaybe schedules
     schedules = filter (not . null) . filter disjoint . sequence $ lists
@@ -206,8 +199,8 @@ filmsMissedBy cat ws vs =
 screeningListsFor :: WholeSchedule -> [Film] -> [[Screening]]
 screeningListsFor = map . screeningsFor
 
+pairsOf' :: [t] -> [(t, t)]
 pairsOf' s = [(x,y) | (x:xs) <- tails s, y <- xs]
-pairsOf s = [(a,b) | a <- s, b <- s, a/=b]
 
 disjoint :: [Screening] -> Bool
 disjoint = not . any overlaps . pairsOf

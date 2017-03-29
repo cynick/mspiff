@@ -87,3 +87,4 @@ let gp = ":rg\nhtml (page w)\n"
 :def! gp (\_ -> return gp)
 
 t <- parseTags <$> T.readFile "s"
+Just ld = processLd t

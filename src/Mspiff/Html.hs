@@ -91,7 +91,7 @@ renderDayData (day, ss) = container renderVenues
                      , at "data-venue-count" (toText (DL.length venues))
                      ]
     renderVenues = mapM_ renderVenue (DL.zip [1..] venues)
-    venues = NE.groupAllWith screen (NE.toList ss)
+    venues = NE.groupAllWith venue (NE.toList ss)
 
 renderVenue :: (Int, NonEmpty Screening) -> Html ()
 renderVenue (venue, ss) = row renderScreenings

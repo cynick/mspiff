@@ -43,11 +43,12 @@ instance FromJSON Film where
 
 instance ToJSON Film where
   toJSON Film{..} =
-    object [ "filmId" .= filmId
-           , "filmTitle" .= filmTitle
-           , "filmScreenings" .= filmScreenings
-           , "filmUrl" .= filmUrl
-           ]
+    object
+      [ "filmId" .= filmId
+      , "filmTitle" .= filmTitle
+      , "filmScreenings" .= filmScreenings
+      , "filmUrl" .= filmUrl
+      ]
 
 data Screening = Screening
   { scFilmId :: FilmId
@@ -61,24 +62,26 @@ data Screening = Screening
 
 instance ToJSON Screening where
   toJSON Screening{..} =
-    object [ "scFilmId" .= scFilmId
-           , "screeningId" .= screeningId
-           , "overlapping" .= overlapping
-           , "otherScreening" .= otherScreening
-           , "showtime" .= showtime
-           , "duration" .= duration
-           , "venue" .= venue
-           ]
+    object
+      [ "scFilmId" .= scFilmId
+      , "screeningId" .= screeningId
+      , "overlapping" .= overlapping
+      , "otherScreening" .= otherScreening
+      , "showtime" .= showtime
+      , "duration" .= duration
+      , "venue" .= venue
+      ]
 
 instance Show Screening where
-  show s = "Screening {scFilmId = " <> show (scFilmId s) <>
-           ", screeningId = " <> show (screeningId s) <>
-           ", overlapping = " <> show (screeningId <$> overlapping s) <>
-           ", otherScreening = " <> show (screeningId <$> otherScreening s) <>
-           ", showtime = " <> show (showtime s) <>
-           ", duration = " <> show (duration s) <>
-           ", venue = " <> show (venue s) <>
-           "}"
+  show s =
+    "Screening {scFilmId = " <> show (scFilmId s) <>
+    ", screeningId = " <> show (screeningId s) <>
+    ", overlapping = " <> show (screeningId <$> overlapping s) <>
+    ", otherScreening = " <> show (screeningId <$> otherScreening s) <>
+    ", showtime = " <> show (showtime s) <>
+    ", duration = " <> show (duration s) <>
+    ", venue = " <> show (venue s) <>
+    "}"
 
 instance Eq Screening where
   a == b = screeningId a == screeningId b
@@ -92,14 +95,14 @@ instance Ord Screening where
 
 instance FromJSON Screening where
   parseJSON (Object v) =
-    Screening <$>
-      v .: "scFilmId" <*>
-      v .: "screeningId" <*>
-      pure [] <*>
-      pure Nothing <*>
-      v .: "screeningTime" <*> -- seconds since Epoch
-      ((60*) <$> v .: "duration" ) <*> -- duration is given in minutes
-      v .: "screen"
+    Screening
+     <$> v .: "scFilmId"
+     <*> v .: "screeningId"
+     <*> pure []
+     <*> pure Nothing
+     <*> v .: "showtime"  -- seconds since Epoch
+     <*> v .: "duration" -- duration is given in minutes
+     <*> v .: "venue"
 
   parseJSON _ = error "invalid screening json"
 
@@ -107,6 +110,7 @@ data Pinned = Pinned | Unpinned deriving (Show,Eq)
 data ScreeningStatus =
   Unscheduled | Scheduled | Impossible | RuledOut | OtherScheduled
   deriving (Enum, Show, Eq)
+
 data MarkedScreening = MarkedScreening
   { status :: ScreeningStatus
   , pinned :: Pinned

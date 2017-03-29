@@ -55,7 +55,7 @@ library
                      , Mspiff.Loader
                      , Mspiff.Scheduler
                      , Mspiff.Html
-                     , Mspiff.Scrape.Scrape
+                     , Mspiff.Scrape
     default-language:    Haskell2010
     default-extensions: OverloadedStrings
                       , FlexibleContexts
@@ -76,7 +76,7 @@ test-suite test
                   , Mspiff.Model
                   , Mspiff.Scheduler
                   , Mspiff.Html
-                  , Mspiff.Scrape.Scrape
+                  , Mspiff.Scrape
 
     default-extensions: OverloadedStrings
                       , FlexibleContexts

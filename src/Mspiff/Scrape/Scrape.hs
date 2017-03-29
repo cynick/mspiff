@@ -3,10 +3,11 @@ module Mspiff.Scrape.Scrape
     where
 
 import Mspiff.Model
-import qualified Data.Text.Lazy as T
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as LT
 import qualified Data.List as DL
 import Data.Aeson
---import Data.ByteString.Lazy
+import qualified Data.ByteString.Lazy as BS
 import Control.Monad
 import Data.Monoid
 import Data.Maybe
@@ -32,6 +33,9 @@ data ScrapeScreening = ScrapeScreening
 parseDate :: T.Text -> Maybe UTCTime
 parseDate = parseTimeM True defaultTimeLocale "%Y-%m-%dT%H:%M:%S%z" . T.unpack
 
+fromUtc :: UTCTime -> Int
+fromUtc = fromIntegral . floor . utcTimeToPOSIXSeconds
+
 instance FromJSON ScrapeScreening where
   parseJSON (Object v) =
     ScrapeScreening
@@ -51,8 +55,33 @@ toDateUrl d = (d, scheduleUrlBase <> T.pack (E.encode str) <> "&")
   where
     str = formatTime defaultTimeLocale "%-m/%d/%y" (UTCTime d 0)
 
-processAll :: IO [ScrapeScreening]
-processAll = join <$> mapM processUrl (toDateUrl <$> days)
+saveData :: IO ()
+saveData = do
+  scrapes <- scrapeAll
+  let
+    collectNames ScrapeScreening{..} = ((screeningName, screeningUrl) :)
+    toFilm (idx,(screeningName,screeningUrl)) =
+      Film idx screeningName [] screeningUrl
+    names = DL.nub $ foldr collectNames [] scrapes
+    films = DL.sort $ toFilm <$> zip [0..] names
+    toScreening (idx, ScrapeScreening{..}) acc =
+       Screening
+         (filmId (fromJust $ DL.find (\f -> filmTitle f == screeningName) films))
+         idx
+         []
+         Nothing
+         (fromMaybe 0 (fromUtc <$> screeningStartTime))
+         screeningDuration
+         screeningVenue
+         : acc
+    screenings =
+      DL.sort $ DL.reverse $ (foldr toScreening [] (zip [0..] scrapes))
+  BS.writeFile "data/films" (encode films)
+  BS.writeFile "data/screenings" (encode screenings)
+  return ()
+
+scrapeAll :: IO [ScrapeScreening]
+scrapeAll = join <$> mapM processUrl (toDateUrl <$> days)
   where days = DL.take 16 [(fromGregorian 2017 4 13) ..]
 
 processUrl :: (Day, T.Text) -> IO [ScrapeScreening]
@@ -70,7 +99,7 @@ processLd = go
 processTags :: Day -> [Tag T.Text] -> [ScrapeScreening]
 processTags day tags = foldr combine [] (fromMaybe [] screenings)
   where
-    screenings = processLd tags >>= decode' . encodeUtf8
+    screenings = processLd tags >>= decode' . encodeUtf8 . LT.fromStrict
 
     durations = go [] tags
       where
@@ -97,4 +126,4 @@ hit url = do
   manager <- newManager defaultManagerSettings
   request <- parseRequest (T.unpack url)
   response <- httpLbs request manager
-  return $ decodeUtf8 (responseBody response)
+  return $ LT.toStrict (decodeUtf8 (responseBody response))

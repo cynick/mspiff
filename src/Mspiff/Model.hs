@@ -14,27 +14,40 @@ type ScreeningId = Int
 type Title = T.Text
 type Showtime = Int
 type Duration = Int
-type Screen = T.Text
+type Venue = T.Text
+type Url = T.Text
 
 data Film = Film
   { filmId :: FilmId
   , filmTitle :: Title
   , filmScreenings :: [Screening]
-   --  ... other attributes as they become interesting.
+  , filmUrl :: Url
   }
-  deriving (Show,Ord)
+  deriving Show
+
+instance Ord Film where
+  a `compare` b = filmTitle a `compare` filmTitle b
 
 instance Eq Film where
   a == b = filmId a == filmId b
 
 instance FromJSON Film where
   parseJSON (Object v) =
-    Film <$>
-      v .: "filmId" <*>
-      v .: "filmTitle" <*>
-      pure []
+    Film
+      <$> v .: "filmId"
+      <*> v .: "filmTitle"
+      <*> pure []
+      <*> v .: "filmUrl"
 
   parseJSON _ = error "invalid film json"
+
+instance ToJSON Film where
+  toJSON Film{..} =
+    object [ "filmId" .= filmId
+           , "filmTitle" .= filmTitle
+           , "filmScreenings" .= filmScreenings
+           , "filmUrl" .= filmUrl
+           ]
 
 data Screening = Screening
   { scFilmId :: FilmId
@@ -43,8 +56,19 @@ data Screening = Screening
   , otherScreening :: Maybe Screening
   , showtime :: Showtime
   , duration :: Duration
-  , screen :: Screen
+  , venue :: Venue
   }
+
+instance ToJSON Screening where
+  toJSON Screening{..} =
+    object [ "scFilmId" .= scFilmId
+           , "screeningId" .= screeningId
+           , "overlapping" .= overlapping
+           , "otherScreening" .= otherScreening
+           , "showtime" .= showtime
+           , "duration" .= duration
+           , "venue" .= venue
+           ]
 
 instance Show Screening where
   show s = "Screening {scFilmId = " <> show (scFilmId s) <>
@@ -53,7 +77,7 @@ instance Show Screening where
            ", otherScreening = " <> show (screeningId <$> otherScreening s) <>
            ", showtime = " <> show (showtime s) <>
            ", duration = " <> show (duration s) <>
-           ", screen = " <> show (screen s) <>
+           ", venue = " <> show (venue s) <>
            "}"
 
 instance Eq Screening where
@@ -64,7 +88,7 @@ instance Ord Screening where
     case showtime a `compare` showtime b of
       LT -> LT
       GT -> GT
-      EQ -> screen a `compare` screen b
+      EQ -> venue a `compare` venue b
 
 instance FromJSON Screening where
   parseJSON (Object v) =

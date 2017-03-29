@@ -1,5 +1,5 @@
 
-module Mspiff.Scrape.Scrape
+module Mspiff.Scrape
     where
 
 import Mspiff.Model
@@ -10,6 +10,7 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as BS
 import Control.Monad
 import Data.Monoid
+import Data.Function (on)
 import Data.Maybe
 import Data.Text.Lazy.Encoding
 import qualified Network.URI.Encode as E
@@ -28,13 +29,16 @@ data ScrapeScreening = ScrapeScreening
   , screeningVenue :: Name
   , screeningUrl :: T.Text
   }
-  deriving (Show, Eq)
+  deriving (Show, Read, Eq)
 
 parseDate :: T.Text -> Maybe UTCTime
 parseDate = parseTimeM True defaultTimeLocale "%Y-%m-%dT%H:%M:%S%z" . T.unpack
 
 fromUtc :: UTCTime -> Int
-fromUtc = fromIntegral . floor . utcTimeToPOSIXSeconds
+fromUtc = fromIntegral . floorInt . utcTimeToPOSIXSeconds
+  where
+    floorInt :: RealFrac a => a -> Int
+    floorInt = floor
 
 instance FromJSON ScrapeScreening where
   parseJSON (Object v) =
@@ -50,19 +54,19 @@ instance FromJSON ScrapeScreening where
 scheduleUrlBase :: T.Text
 scheduleUrlBase = "http://prod3.agileticketing.net/WebSales/pages/list.aspx?epguid=87ecbce5-5fcd-406d-8bcb-88fa6bb54965&mdy="
 
-toDateUrl :: Day -> (Day, T.Text)
-toDateUrl d = (d, scheduleUrlBase <> T.pack (E.encode str) <> "&")
+toDateUrl :: Day -> T.Text
+toDateUrl d = scheduleUrlBase <> T.pack (E.encode str) <> "&"
   where
     str = formatTime defaultTimeLocale "%-m/%d/%y" (UTCTime d 0)
 
-saveData :: IO ()
-saveData = do
-  scrapes <- scrapeAll
+saveData :: [ScrapeScreening] -> IO ()
+saveData scrapes = do
   let
-    collectNames ScrapeScreening{..} = ((screeningName, screeningUrl) :)
+    toName ScrapeScreening{..} = (screeningName, screeningUrl)
     toFilm (idx,(screeningName,screeningUrl)) =
       Film idx screeningName [] screeningUrl
-    names = DL.nub $ foldr collectNames [] scrapes
+    names =
+      DL.sortBy (compare `on` fst) $ DL.nubBy ((==) `on` fst) $ toName <$> scrapes
     films = DL.sort $ toFilm <$> zip [0..] names
     toScreening (idx, ScrapeScreening{..}) acc =
        Screening
@@ -75,7 +79,8 @@ saveData = do
          screeningVenue
          : acc
     screenings =
-      DL.sort $ DL.reverse $ (foldr toScreening [] (zip [0..] scrapes))
+      DL.sort $ DL.reverse $ foldr toScreening [] (zip [0..] scrapes)
+  mapM_ print names
   BS.writeFile "data/films" (encode films)
   BS.writeFile "data/screenings" (encode screenings)
   return ()
@@ -84,33 +89,32 @@ scrapeAll :: IO [ScrapeScreening]
 scrapeAll = join <$> mapM processUrl (toDateUrl <$> days)
   where days = DL.take 16 [(fromGregorian 2017 4 13) ..]
 
-processUrl :: (Day, T.Text) -> IO [ScrapeScreening]
-processUrl (d, url) = processTags d . parseTags <$> hit url
+processUrl :: T.Text -> IO [ScrapeScreening]
+processUrl url = processTags . parseTags <$> hit url
 
 processLd :: [Tag T.Text] -> Maybe T.Text
 processLd = go
   where
-    go [] = Nothing
     go (x:y:xs) | isLdJson x && isTagText y = Just (fromTagText y)
                 | otherwise = go xs
+    go _ = Nothing
     isLdJson t =
       isTagOpenName "script" t && fromAttrib "type" t == "application/ld+json"
 
-processTags :: Day -> [Tag T.Text] -> [ScrapeScreening]
-processTags day tags = foldr combine [] (fromMaybe [] screenings)
+processTags :: [Tag T.Text] -> [ScrapeScreening]
+processTags tags = foldr combine [] (fromMaybe [] screenings)
   where
     screenings = processLd tags >>= decode' . encodeUtf8 . LT.fromStrict
-
     durations = go [] tags
       where
         go :: [(Name,Int)] -> [Tag T.Text] -> [(Name,Int)]
         go acc [] = acc
-        go acc list@(se:item:_:timeVal:close:name:nameVal:xs)
+        go acc list@(se:item:_:_:close:name:nameVal:xs)
           | isSE se && isName name && isItem item && isTagClose close =
              go ( (fromTagText nameVal, parseDuration se) : acc) xs
           | otherwise = go acc (DL.drop 1 list)
         go acc _ = acc
-        parseDuration = read . T.unpack . fromAttrib "duration"
+        parseDuration = (*60) . read . T.unpack . fromAttrib "duration"
         isDiv = isTagOpenName "div"
         hasClass c t = isDiv t && fromAttrib "class" t == c
         isSE = hasClass "ScheduledEvent"

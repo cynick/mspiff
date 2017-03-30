@@ -31,25 +31,13 @@ library
                    , aeson
                    , vector
                    , binary
-                   , blaze-html
-                   , blaze-markup
                    , split
-                   , parsec
-                   , contravariant
-                   , array
-                   , QuickCheck
-                   , HUnit
-                   , template-haskell
                    , file-embed
-                   , array
-                   , monad-loops
-                   , these
-                   , ListZipper ==1.2.0.2
                    , lucid
                    , tagsoup
                    , http-client
-                   , conduit
                    , uri-encode
+                   , data-default
 
     exposed-modules:   Mspiff.Model
                      , Mspiff.Loader
@@ -64,6 +52,37 @@ library
                       , TemplateHaskell
                       , ExtendedDefaultRules
                       , RecordWildCards
+
+executable mspiff
+  main-is:           src/Main.hs
+  build-depends:     base
+                   , mspiff
+                   , mtl
+                   , text
+                   , time
+                   , containers
+                   , unordered-containers
+                   , split
+                   , bytestring
+                   , aeson
+                   , vector
+                   , binary
+                   , split
+                   , file-embed
+                   , lucid
+                   , tagsoup
+                   , http-client
+                   , uri-encode
+                   , data-default
+  default-language:    Haskell2010
+  default-extensions: OverloadedStrings
+                      , FlexibleContexts
+                      , GeneralizedNewtypeDeriving
+                      , TupleSections
+                      , TemplateHaskell
+                      , ExtendedDefaultRules
+                      , RecordWildCards
+
 test-suite test
     type:              exitcode-stdio-1.0
     main-is:           Runner.hs
@@ -72,6 +91,7 @@ test-suite test
     default-language:  Haskell2010
     other-modules:  TestUtil
                   , Test.SchedulerTest
+                  , Test.ModelTest
                   , Mspiff.Loader
                   , Mspiff.Model
                   , Mspiff.Scheduler
@@ -98,9 +118,9 @@ test-suite test
                    , time
                    , array
                    , these
-                   , ListZipper ==1.2.0.2
                    , lucid
                    , tagsoup
                    , http-client
                    , conduit
                    , uri-encode
+                   , data-default

@@ -1,15 +1,24 @@
-
+{-# LANGUAGE JavaScriptFFI, CPP #-}
 module Main where
 
+import Control.Monad
+import Control.Concurrent
+import GHCJS.Foreign
+import GHCJS.Types
+import GHCJS.Marshal(fromJSVal)
+import GHCJS.Foreign.Callback (Callback, syncCallback1, OnBlocked(ContinueAsync))
+import GHCJS.Prim
+import Data.JSString.Text
+
+import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as T
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString as BS
 
-import qualified Data.Text as T
 import Data.FileEmbed
 
--- import JavaScript.JQuery
--- import JavaScript.JQuery.Internal
+import JavaScript.JQuery
+import JavaScript.JQuery.Internal
 
 import Lucid
 
@@ -25,16 +34,11 @@ main = do
   let
     Just catalog = loadCatalog (LBS.fromStrict catalogJson)
     html = renderText (renderWholeSchedule catalog)
-  T.putStrLn html
+    html' = textToJSString (T.toStrict html)
+  b <- select "body"
+  append html' b
 
 {-
-
-  b <- select "body"
-  append "<div class='mouse'></div>" b
-  m <- select ".mouse"
-  mousemove (handler m) def b
-
-
 handler :: JQuery -> Event -> IO ()
 handler m e = do
   x <- pageX e

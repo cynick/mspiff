@@ -6,6 +6,7 @@ import qualified Data.List.NonEmpty as NE
 import Data.List.NonEmpty
 import Data.Time
 import Data.Monoid
+import Data.Maybe
 
 import Lucid
 import Lucid.Base
@@ -16,7 +17,7 @@ import Mspiff.Model
 dayOf :: Screening -> Day
 dayOf = utctDay . showtimeToUtc
 
-page :: WholeSchedule -> Html ()
+page :: Catalog -> Html ()
 page = doctypehtml_ . renderWholeSchedule
 
 at :: T.Text -> T.Text -> Attribute
@@ -27,12 +28,12 @@ toText = T.pack . show
 
 script :: Monad m => T.Text -> HtmlT m ()
 script s =
-  with (makeElement "script") [at "src" s
+  with (makeElement "script") [ at "src" s
                               , at "type" "application/javascript"
                               ] ""
 
-renderWholeSchedule :: WholeSchedule -> Html ()
-renderWholeSchedule (Schedule ss) = header >> body_ body
+renderWholeSchedule :: Catalog -> Html ()
+renderWholeSchedule (Catalog films ss) = header >> body_ body
   where
     body = div_ [id_ "container"] (dataContainer >> timelineContainer >> renderTimeline)
     days = NE.groupAllWith dayOf ss
@@ -51,7 +52,7 @@ renderWholeSchedule (Schedule ss) = header >> body_ body
     renderDayTimeline :: Int -> Html ()
     renderDayTimeline d =
       div_ [ id_ ("day-timeline-" <> toText d) ] ""
-    renderDays = mapM_ renderDayData (DL.zip [1..] days)
+    renderDays = mapM_ (renderDayData films) (DL.zip [1..] days)
     renderTimeline = script_ "Mspiff.renderTimeline()"
 
 header :: Html ()
@@ -83,28 +84,30 @@ header = head_ $ do
   script "http://local.hoffmanavenuesoftware.com/js/vis.js"
   script "http://local.hoffmanavenuesoftware.com/js/mspiff.js"
 
-renderDayData :: (Int, NonEmpty Screening) -> Html ()
-renderDayData (day, ss) = container renderVenues
+renderDayData :: [Film] -> (Int, NonEmpty Screening) -> Html ()
+renderDayData films (day, ss) = container renderVenues
   where
     container = div_ [ id_ ("day-data-" <> toText day)
                      , at "data-venue-count" (toText (DL.length venues))
                      ]
-    renderVenues = mapM_ renderVenue (DL.zip [1..] venues)
+    renderVenues = mapM_ (renderVenue films) (DL.zip [1..] venues)
     venues = NE.groupAllWith venue (NE.toList ss)
 
-renderVenue :: (Int, NonEmpty Screening) -> Html ()
-renderVenue (venue, ss) = row renderScreenings
+renderVenue :: [Film] -> (Int, NonEmpty Screening) -> Html ()
+renderVenue films (venue, ss) = row renderScreenings
   where
     row = div_ [ class_ ("venue-" <> toText venue)
                , at "data-venue-name" (toText venue)
                ]
-    renderScreenings = mapM_ renderScreening ss
+    renderScreenings = mapM_ (renderScreening films) ss
 
-titleOf :: Screening -> T.Text
-titleOf = undefined -- filmTitle . filmOf
+titleOf :: [Film] -> Screening -> T.Text
+titleOf films s = filmTitle film
+  where
+    film = fromJust (DL.find (\f -> filmId f == scFilmId s) films)
 
-renderScreening :: Screening -> Html ()
-renderScreening s = do
+renderScreening :: [Film] -> Screening -> Html ()
+renderScreening films s = do
   let
     startTime = showtimeToUtc s
     utcToText = T.pack . formatTime defaultTimeLocale "%Y-%m-%dT%H:%M:%S"
@@ -113,7 +116,7 @@ renderScreening s = do
        , at "data-start" (utcToText startTime)
        , at "data-end" (utcToText (addUTCTime (fromIntegral (duration s)) startTime))
        ] $ do
-    div_ [class_ "film-title"] (toHtml (titleOf s))
+    div_ [class_ "film-title"] (toHtml (titleOf films s))
     control
 
 icon :: T.Text -> Html ()

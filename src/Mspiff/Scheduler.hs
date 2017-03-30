@@ -222,35 +222,6 @@ disjointLists = go
     go [] _ = True
     go x y = not (foldr (\a b -> b || anyOverlap x a) False y)
 
-
-{-
-sequence' :: OverlapMatrix -> [[Screening]] -> [[Screening]]
-sequence' mat = foldr lift' ([[]])
-  where
-    lift' l acc = do
-      a <- l
-      b <- acc
-      guard (g a b)
-      return (a:b)
-    g a (b:_) = mat ! (screeningId a,screeningId b)
-    g _ _ = True
--}
-  
-{--      a <- l
-      b <- acc
-      return ((:) a b)
---}   
--- liftM2 f m1 m2          = do { x1 <- m1; x2 <- m2; return (f x1 x2) }
-
-{-
-sequence = do
-  a <- x
-  b <- y
-  c <- z
-  guard (disjoint [a,b,c])
-  return [a,b,c]
-  -}
-
 showtimesForSchedule :: ViewableSchedule -> [UTCTime]
 showtimesForSchedule = (toUtc <$>) . DL.sort . scheduleScreenings
   where
@@ -258,34 +229,6 @@ showtimesForSchedule = (toUtc <$>) . DL.sort . scheduleScreenings
 
 readInt :: String -> Int
 readInt = read
-
-{-
-type OverlapMatrix = Array (Int,Int) Bool
-overlapMatrix :: [Screening] -> OverlapMatrix
-overlapMatrix ss =
-  array ((0,0),(len,len))
-        [ ((screeningId a,screeningId b), a `overlaps` b)
-        | a<- ss, b <- ss
-        ]
-  where
-    len = length ss -1
-    overlaps a b = not (a `after` b || b `after` a)
-
-disjoint'' :: [Screening] -> Bool
-disjoint'' s =
-  (len * (len - 1)) == length [() | a <- s, b <- s, not (a `overlaps` b)]
-  where
-    len = length s
-    overlaps a b = not (a `after` b || b `after` a)
-
-disjoint' :: Array (Int,Int) Bool -> [Screening] -> Bool
-disjoint' mat = not . any overlaps . pairsOf
-  where
-    overlaps (a,b) = mat ! (screeningId a, screeningId b)
-    pairsOf s = [(a,b) | a <- s, b <- s, a/=b]
-
-
--}
 
 makeHoles :: Eq a => [a] -> [[a]]
 makeHoles xs = fmap (\x -> xs \\ [x]) xs

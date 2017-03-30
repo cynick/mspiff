@@ -11,6 +11,7 @@
 
 import qualified Data.List as DL
 import Data.List.Split
+import qualified Data.ByteString.Lazy as BS
 import qualified Data.Map.Strict as M
 import qualified Data.List.Split as DL
 import qualified Data.List.NonEmpty as NE
@@ -36,34 +37,6 @@ import Mspiff.Loader
 import Mspiff.Scheduler
 import Mspiff.Html
 
-
-ts@(UTCTime d dt) <- getCurrentTime
-let html = renderToFile "t.html"
-let w = Schedule screenings
-let s = screenings
-let ss = screenings
-let Schedule d3 = (partitionByDay w) DL.!! 3
-f <- DL.sort <$> loadFilms
-let catalog = f
-let (f0:f1:f2:f3:f4:f5:f6:f7:f8:f9:_) = f
-let (s0:s1:s2:s3:s4:s5:s6:s7:s8:s9:_) = s
-let scs@(sc1:sc2:sc3:_) = viewableSchedulesFor w (DL.take 10 f)
-let s' = DL.concat $ fmap scheduleScreenings $ DL.take 1 $ viewableSchedulesFor w (DL.take 20 f)
-let p = mapM_ print
-
-let qc = quickCheckWith stdArgs { maxSuccess = 5000 }
-let vc = verboseCheckWith stdArgs { maxSuccess = 5000 }
-let hist v = DL.foldl' (\(a,b) v' -> if v' == v then (a+1,b) else (a,b+1)) (0,0)
-let toIds t = fmap (fmap (fmap screeningId)) $ t
-let toSt t = fmap (fmap (fmap showtime)) $ t
-let sl = screeningListsFor w (DL.take 10 f)
-let slc = DL.chunksOf 2 sl
-let r = DL.take 3 . DL.filter disjoint . sequence
-let toUtc = posixSecondsToUTCTime . fromIntegral . showtime
-let f' = DL.foldr (\a b -> (fmap DL.concat . sequence $ a) : b) []
-
-let v = fmap sequence (DL.chunksOf 2 sl)
-
 :def! rg (\_ -> return ":r\n:g\n")
 :def! Rg (\_ -> return ":r\n:g\n")
 
@@ -77,7 +50,6 @@ let v = fmap sequence (DL.chunksOf 2 sl)
 let rc s = let [t,i] = DL.words s in ":m Test.HUnit\n:l test/Test/" ++ t ++ ".hs\nrunTestTT (tests1 " ++ i ++ ")"
 :def! rc (return . rc)
 
-
 :def! rl (\t -> return (":m Test.HUnit\n:l test/Test/" ++ t ++ ".hs\nrunTestTT lastTest"))
 
 :def! b (\_ -> return (":l src/main.hs\n:set args build\nmain"))
@@ -86,7 +58,18 @@ let rc s = let [t,i] = DL.words s in ":m Test.HUnit\n:l test/Test/" ++ t ++ ".hs
 let gp = ":rg\nhtml (page w)\n"
 :def! gp (\_ -> return gp)
 
-t <- parseTags <$> T.readFile "s"
-scrapes <- (read <$> readFile "a") :: IO [ScrapeScreening]
+let p = mapM_ print
+
+ts@(UTCTime d dt) <- getCurrentTime
+let html = renderToFile "t.html"
+
+Just cat@(Catalog{..}) <- loadCatalog <$> BS.readFile "data/catalog"
+
+let qc = quickCheckWith stdArgs { maxSuccess = 5000 }
+let vc = verboseCheckWith stdArgs { maxSuccess = 5000 }
+let hist v = DL.foldl' (\(a,b) v' -> if v' == v then (a+1,b) else (a,b+1)) (0,0)
+
+let toUtc = posixSecondsToUTCTime . fromIntegral . showtime
+
 
 

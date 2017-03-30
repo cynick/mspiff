@@ -72,23 +72,27 @@ writeCatalog scrapes = do
          (filmId (fromJust $ DL.find (\f -> filmTitle f == screeningName) films))
          idx
          []
-         Nothing
+         []
          (fromMaybe 0 (fromUtc <$> screeningStartTime))
          screeningDuration
          screeningVenue
          : acc
     screenings =
       DL.sort $ DL.reverse $ foldr toScreening [] (zip [0..] scrapes)
-  mapM_ print names
   BS.writeFile "data/catalog" (encode (Catalog films screenings))
   return ()
 
 scrapeAll :: IO [ScrapeScreening]
-scrapeAll = join <$> mapM processUrl (toDateUrl <$> days)
-  where days = DL.take 16 [(fromGregorian 2017 4 13) ..]
+scrapeAll = join <$> mapM processUrl (zip days (toDateUrl <$> days))
+  where days = DL.take 17 [(fromGregorian 2017 4 13) ..]
 
-processUrl :: T.Text -> IO [ScrapeScreening]
-processUrl url = processTags . parseTags <$> hit url
+processUrl :: (Day, T.Text) -> IO [ScrapeScreening]
+processUrl (day, url) = do
+  c <- hit url
+  let r = processTags . parseTags $ c
+  putStrLn $ "---- " ++ show day ++ " ----"
+  mapM_ print (screeningName <$> r)
+  return r
 
 processLd :: [Tag T.Text] -> Maybe T.Text
 processLd = go

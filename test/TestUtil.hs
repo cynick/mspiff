@@ -1,21 +1,26 @@
 
 module TestUtil where
 
+import qualified Data.ByteString.Lazy as BS
 import qualified Data.List as DL
 import Test.QuickCheck hiding (Success)
 import Data.Maybe
-
+import System.IO.Unsafe
 import Mspiff.Model
 import Mspiff.Loader
 import Mspiff.Scheduler
 
 newtype ArbFilm = ArbFilm Film deriving (Show, Eq)
+films_ :: [Film]
+screenings_ :: [Screening]
+Just (Catalog films_ screenings_) =
+  loadCatalog $ unsafePerformIO (BS.readFile "data/catalog")
 
 instance Arbitrary ArbFilm
   where
     arbitrary = do
-      i <- choose (0, length films - 1)
-      return $ ArbFilm (films !! i)
+      i <- choose (0, length films_ - 1)
+      return $ ArbFilm (films_ !! i)
 
 arbitraryDistinctList :: (Arbitrary a, Eq a) => Int -> Gen [a]
 arbitraryDistinctList count = do
@@ -28,7 +33,7 @@ arbitraryDistinctList count = do
       if c == 0
         then return list
         else build (c -1) (f:list)
-  build (min count (DL.length films)) []
+  build (min count (DL.length films_)) []
 
 newtype FilmList = FilmList {fromFilmList :: [ArbFilm]} deriving Show
 instance Arbitrary FilmList
@@ -46,8 +51,8 @@ instance Arbitrary DisjointList
 instance Arbitrary ArbScreening
   where
     arbitrary = do
-      i <- choose (0, length screenings - 1)
-      return $ ArbScreening (screenings !! i)
+      i <- choose (0, length screenings_ - 1)
+      return $ ArbScreening (screenings_ !! i)
 
 getOneDisjoint :: Gen [ArbScreening]
 getOneDisjoint = do
@@ -55,7 +60,7 @@ getOneDisjoint = do
   if disjoint (unArb <$> l) then return l else getOneDisjoint
 
 fs :: ScreeningId -> Screening
-fs sid = fromJust $ DL.find ((==sid) . screeningId) screenings
+fs sid = fromJust $ DL.find ((==sid) . screeningId) screenings_
 s325, s326, s288 :: Screening
 s325 = fs 325
 s326 = fs 326

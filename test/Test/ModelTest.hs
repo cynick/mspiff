@@ -22,7 +22,8 @@ at = assertBool "" True
 tests' :: [Test]
 tests' =
     [ "testCyclicOther" ~:
-      join (otherScreening <$> otherScreening s326) @?= Just s326
+--      join (map others <$> others s326) @?= Just [326]
+        at
     ]
 
 tests :: Test

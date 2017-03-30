@@ -118,6 +118,9 @@ data MarkedScreening = MarkedScreening
 instance Eq MarkedScreening where
   a == b = screening a == screening b
 
+instance Ord MarkedScreening where
+  a `compare` b = screening a `compare` screening b
+
 isRuledOut :: MarkedScreening -> Bool
 isRuledOut = (==RuledOut) . status
 

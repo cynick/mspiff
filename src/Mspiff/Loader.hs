@@ -5,6 +5,7 @@ import Prelude
 import qualified Data.ByteString.Lazy as BS
 import Data.Aeson hiding (Array)
 import Data.List
+import qualified Data.List.NonEmpty as NE
 import qualified Data.List as DL
 import Data.Maybe
 
@@ -34,23 +35,14 @@ update (Catalog _films _screenings) = Just (Catalog films screenings)
         schedule = Schedule screenings0
         set f = f { filmScreenings = screeningsFor schedule f }
 
-    filmOf_ :: Screening -> Film
-    filmOf_ s = fromJust $ DL.find (\f -> filmId f == scFilmId s) films0
-
     screenings :: [Screening]
-    screenings = DL.sort $ DL.nub $ foldr tie [] screenings0
+    screenings = DL.sort $ DL.concat $ tie <$> NE.groupAllWith scFilmId screenings0
       where
-        findOtherScreening s = find (isOther s) (filmScreenings (filmOf_ s))
-        tie s acc
-          | s `elem` acc = acc
-          | otherwise =
-              case findOtherScreening s of
-                Just other ->
-                  let
-                    s' = s {otherScreening = Just other'}
-                    other' = other {otherScreening = Just s'}
-                  in s' : other' : acc
-                _ -> s : acc
+        tie :: NE.NonEmpty Screening -> [Screening]
+        tie ss = fmap set list
+          where
+            list = NE.toList ss
+            set s = s { others = list \\ [s] }
 
     films :: [Film]
     films = set <$> films0
@@ -72,6 +64,4 @@ after a b = showtime a > showtime b + duration b
 
 overlaps :: (Screening, Screening) -> Bool
 overlaps (a, b) = not (a `after` b || b `after` a)
-
-
 

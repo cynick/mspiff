@@ -31,6 +31,14 @@ instance Ord Film where
 instance Eq Film where
   a == b = filmId a == filmId b
 
+instance ToJSON Film where
+  toJSON Film{..} =
+    object
+      [ "filmId" .= filmId
+      , "filmTitle" .= filmTitle
+      , "filmUrl" .= filmUrl
+      ]
+
 instance FromJSON Film where
   parseJSON (Object v) =
     Film
@@ -41,43 +49,22 @@ instance FromJSON Film where
 
   parseJSON _ = error "invalid film json"
 
-instance ToJSON Film where
-  toJSON Film{..} =
-    object
-      [ "filmId" .= filmId
-      , "filmTitle" .= filmTitle
-      , "filmScreenings" .= filmScreenings
-      , "filmUrl" .= filmUrl
-      ]
-
 data Screening = Screening
   { scFilmId :: FilmId
   , screeningId :: ScreeningId
   , overlapping :: [Screening]
-  , otherScreening :: Maybe Screening
+  , others :: [Screening]
   , showtime :: Showtime
   , duration :: Duration
   , venue :: Venue
   }
-
-instance ToJSON Screening where
-  toJSON Screening{..} =
-    object
-      [ "scFilmId" .= scFilmId
-      , "screeningId" .= screeningId
-      , "overlapping" .= overlapping
-      , "otherScreening" .= otherScreening
-      , "showtime" .= showtime
-      , "duration" .= duration
-      , "venue" .= venue
-      ]
 
 instance Show Screening where
   show s =
     "Screening {scFilmId = " <> show (scFilmId s) <>
     ", screeningId = " <> show (screeningId s) <>
     ", overlapping = " <> show (screeningId <$> overlapping s) <>
-    ", otherScreening = " <> show (screeningId <$> otherScreening s) <>
+    ", others = " <> show (screeningId <$> others s) <>
     ", showtime = " <> show (showtime s) <>
     ", duration = " <> show (duration s) <>
     ", venue = " <> show (venue s) <>
@@ -93,13 +80,23 @@ instance Ord Screening where
       GT -> GT
       EQ -> venue a `compare` venue b
 
+instance ToJSON Screening where
+  toJSON Screening{..} =
+    object
+      [ "scFilmId" .= scFilmId
+      , "screeningId" .= screeningId
+      , "showtime" .= showtime
+      , "duration" .= duration
+      , "venue" .= venue
+      ]
+
 instance FromJSON Screening where
   parseJSON (Object v) =
     Screening
      <$> v .: "scFilmId"
      <*> v .: "screeningId"
      <*> pure []
-     <*> pure Nothing
+     <*> pure []
      <*> v .: "showtime"  -- seconds since Epoch
      <*> v .: "duration" -- duration is given in minutes
      <*> v .: "venue"

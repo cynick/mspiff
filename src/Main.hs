@@ -36,7 +36,7 @@ main = do
     html = renderText (renderWholeSchedule catalog)
     html' = textToJSString (T.toStrict html)
   b <- select "body"
-  append html' b
+  replaceWith html' b
 
 {-
 handler :: JQuery -> Event -> IO ()

@@ -17,7 +17,6 @@ import qualified Network.URI.Encode as E
 import Network.HTTP.Client
 import Text.HTML.TagSoup
 
-
 import Data.Time
 import Data.Time.Clock.POSIX
 
@@ -59,8 +58,8 @@ toDateUrl d = scheduleUrlBase <> T.pack (E.encode str) <> "&"
   where
     str = formatTime defaultTimeLocale "%-m/%d/%y" (UTCTime d 0)
 
-saveData :: [ScrapeScreening] -> IO ()
-saveData scrapes = do
+writeCatalog :: [ScrapeScreening] -> IO ()
+writeCatalog scrapes = do
   let
     toName ScrapeScreening{..} = (screeningName, screeningUrl)
     toFilm (idx,(screeningName,screeningUrl)) =
@@ -81,8 +80,7 @@ saveData scrapes = do
     screenings =
       DL.sort $ DL.reverse $ foldr toScreening [] (zip [0..] scrapes)
   mapM_ print names
-  BS.writeFile "data/films" (encode films)
-  BS.writeFile "data/screenings" (encode screenings)
+  BS.writeFile "data/catalog" (encode (Catalog films screenings))
   return ()
 
 scrapeAll :: IO [ScrapeScreening]

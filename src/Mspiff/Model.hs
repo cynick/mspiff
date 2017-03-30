@@ -137,10 +137,26 @@ type WholeSchedule = Schedule
 type DaySchedule = Schedule
 type VenueSchedule = Schedule
 type ViewableSchedule = Schedule
-type Catalog = [Film]
 
 showtimeToUtc :: Screening -> UTCTime
 showtimeToUtc = posixSecondsToUTCTime . fromIntegral . showtime
 
+data Catalog = Catalog
+  { films :: [Film]
+  , screenings :: [Screening]
+  }
+  deriving Show
 
+instance FromJSON Catalog where
+  parseJSON (Object o) =
+    Catalog
+      <$> o .: "films"
+      <*> o .: "screenings"
+  parseJSON _ = error "invalid catalog json"
 
+instance ToJSON Catalog where
+  toJSON Catalog{..} =
+    object
+      [ "films" .= films
+      , "screenings" .= screenings
+      ]

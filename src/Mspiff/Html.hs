@@ -12,7 +12,6 @@ import Lucid.Base
 import Lucid.Bootstrap
 
 import Mspiff.Model
-import Mspiff.Loader
 
 dayOf :: Screening -> Day
 dayOf = utctDay . showtimeToUtc
@@ -102,7 +101,7 @@ renderVenue (venue, ss) = row renderScreenings
     renderScreenings = mapM_ renderScreening ss
 
 titleOf :: Screening -> T.Text
-titleOf = filmTitle . filmOf
+titleOf = undefined -- filmTitle . filmOf
 
 renderScreening :: Screening -> Html ()
 renderScreening s = do

@@ -179,13 +179,13 @@ viewableSchedulesFor' ws fs = map Schedule $ filter (not.null) $ DL.concat $ red
     reduce xs = reduce (f (chunksOf 2 xs))
 
 filmsInSchedule :: Catalog -> ViewableSchedule -> [Film]
-filmsInSchedule cat (Schedule s) =
+filmsInSchedule (Catalog films _) (Schedule s) =
   catMaybes $ flip lookup fps <$> (scFilmId <$> s)
     where
-      fps = zip (filmId <$> cat) cat
+      fps = zip (filmId <$> films) films
 
 filmsNotInSchedule :: Catalog -> ViewableSchedule -> [Film]
-filmsNotInSchedule cat vs = cat \\ filmsInSchedule cat vs
+filmsNotInSchedule cat@(Catalog films _) vs = films \\ filmsInSchedule cat vs
 
 filmMissedBy :: WholeSchedule -> ViewableSchedule -> Film -> Bool
 filmMissedBy ws (Schedule vs) film = all (not . disjoint) augmentedSchedules

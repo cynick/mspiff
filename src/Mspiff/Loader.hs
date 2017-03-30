@@ -3,91 +3,65 @@ module Mspiff.Loader where
 import Prelude
 
 import qualified Data.ByteString.Lazy as BS
-
 import Data.Aeson hiding (Array)
 import Data.List
 import qualified Data.List as DL
 import Data.Maybe
-import Data.Array
-import System.IO.Unsafe
 
 import Mspiff.Model
 
-load :: FromJSON a => FilePath -> IO a
-load path = do
-  putStrLn $ "Loading " ++ path
-  raw <- BS.readFile path
-  case decode raw of
-    Just r ->
-      case fromJSON r of
-        Success a -> do
-          putStrLn $ "Finished loading " ++ path
-          return a
-        Error s -> error s
-    Nothing -> error "Failed to parse"
+loadCatalog :: BS.ByteString -> Maybe Catalog
+loadCatalog = maybe Nothing update . decode'
 
-loadFilms :: IO [Film]
-loadFilms = load "data/films"
-
-loadScreenings :: IO [Screening]
-loadScreenings = load "data/screenings"
-
-toArray :: IO [e] -> Array Int e
-toArray m = unsafePerformIO $ do
-  l <- m
-  return $ array (0, DL.length l -1) (DL.zip [0..] l)
-
-loadList :: IO [e] -> [e]
-loadList = unsafePerformIO
-
-screenings0 :: [Screening]
-screenings0 = (computeDeps . DL.sort) (loadList loadScreenings)
+update :: Catalog -> Maybe Catalog
+update (Catalog _films _screenings) = Just (Catalog films screenings)
   where
-    computeDeps ss =
-      let
-        findOverlapping s =
-          fmap snd . filter overlaps . fmap (s,) $ (ss \\ [s])
+    screenings0 :: [Screening]
+    screenings0 = computeDeps . DL.sort $ _screenings
+      where
+        computeDeps ss = setOverlapping <$> ss
+          where
+            findOverlapping s =
+              fmap snd . filter overlaps . fmap (s,) $ (ss \\ [s])
 
-        setOverlapping s =
-          s { overlapping = findOverlapping s }
-        ss' = setOverlapping <$> ss
+            setOverlapping s =
+              s { overlapping = findOverlapping s }
 
-      in ss'
-
-films0 :: [Film]
-films0 = computeDeps (loadList loadFilms)
-  where
-    computeDeps fs =
-      let
+    films0 :: [Film]
+    films0 = computeDeps _films
+      where
+        computeDeps = fmap set
         schedule = Schedule screenings0
         set f = f { filmScreenings = screeningsFor schedule f }
-      in set <$> fs
 
-filmOf_ :: Screening -> Film
-filmOf_ s = fromJust $ DL.find (\f -> filmId f == scFilmId s) films0
+    filmOf_ :: Screening -> Film
+    filmOf_ s = fromJust $ DL.find (\f -> filmId f == scFilmId s) films0
 
-screenings :: [Screening]
-screenings = DL.sort $ DL.nub $ foldr tie [] screenings0
-  where
-    findOtherScreening s = find (isOther s) (filmScreenings (filmOf_ s))
-    tie s acc
-      | s `elem` acc = acc
-      | otherwise =
-          case findOtherScreening s of
-            Just other ->
-              let s' = s {otherScreening = Just other'}
-                  other' = other {otherScreening = Just s'}
-              in s' : other' : acc
-            _ -> s : acc
+    screenings :: [Screening]
+    screenings = DL.sort $ DL.nub $ foldr tie [] screenings0
+      where
+        findOtherScreening s = find (isOther s) (filmScreenings (filmOf_ s))
+        tie s acc
+          | s `elem` acc = acc
+          | otherwise =
+              case findOtherScreening s of
+                Just other ->
+                  let
+                    s' = s {otherScreening = Just other'}
+                    other' = other {otherScreening = Just s'}
+                  in s' : other' : acc
+                _ -> s : acc
 
-films :: [Film]
-films = set <$> films0
-  where
-    schedule = Schedule screenings
-    set f = f { filmScreenings = screeningsFor schedule f }
+    films :: [Film]
+    films = set <$> films0
+      where
+        schedule = Schedule screenings
+        set f = f { filmScreenings = screeningsFor schedule f }
 
+{-                
 filmOf :: Screening -> Film
 filmOf s = fromJust $ DL.find (\f -> filmId f == scFilmId s) films
+-}
 
 screeningsFor :: WholeSchedule -> Film -> [Screening]
 screeningsFor s f = sort $ filter (filt f) (scheduleScreenings s)

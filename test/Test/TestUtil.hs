@@ -1,20 +1,36 @@
 
-module TestUtil where
+module Test.TestUtil where
 
-import qualified Data.ByteString.Lazy as BS
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List as DL
 import Test.QuickCheck hiding (Success)
 import Data.Maybe
-import System.IO.Unsafe
 import Mspiff.Model
 import Mspiff.Loader
 import Mspiff.Scheduler
+import Data.FileEmbed
+import Test.HUnit
+
+at :: Assertion
+at = assertBool "" True
 
 newtype ArbFilm = ArbFilm Film deriving (Show, Eq)
+
+catalogJson :: BS.ByteString
+catalogJson = $(embedFile "data/catalog")
+
+catalog :: Catalog
+catalog = fromJust (loadCatalog (LBS.fromStrict catalogJson))
+
 films_ :: [Film]
+films_ = films catalog
+
 screenings_ :: [Screening]
-Just (Catalog films_ screenings_) =
-  loadCatalog $ unsafePerformIO (BS.readFile "data/catalog")
+screenings_ = screenings catalog
+
+ss :: [Screening]
+ss = screenings catalog
 
 instance Arbitrary ArbFilm
   where
@@ -61,6 +77,7 @@ getOneDisjoint = do
 
 fs :: ScreeningId -> Screening
 fs sid = fromJust $ DL.find ((==sid) . screeningId) screenings_
+
 s325, s326, s288 :: Screening
 s325 = fs 325
 s326 = fs 326

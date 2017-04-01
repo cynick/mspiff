@@ -1,0 +1,1 @@
+../../ui/.stack-work/dist/x86_64-osx/Cabal-1.24.0.0_ghcjs/build/Mspiff/mspiff.jsexe/all.js

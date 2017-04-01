@@ -17,6 +17,7 @@ import qualified Data.List.Split as DL
 import qualified Data.List.NonEmpty as NE
 import Data.Word
 import Text.Printf
+import Control.Arrow
 import Data.Either
 import Data.Text.Read
 import Data.Text
@@ -25,8 +26,6 @@ import Data.Function
 import Data.List.NonEmpty
 import Data.Time.Clock.POSIX
 import Data.Maybe
-import Data.Array
-import Data.These
 
 import qualified Data.Text.IO as T
 import Test.QuickCheck

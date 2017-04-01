@@ -1,10 +1,14 @@
 var Mspiff = (function () {
 
-  function renderDay(day) {
+  function renderDayTimeline(day) {
+    console.log( "RENDER DAY " + day );
     var data = document.getElementById("day-data-" + day)
     var venueCount = data.getAttribute("data-venue-count")
     var items = []
     var venues = []
+    var minTs = null;
+    var maxTs = null;
+
     for (venueIndex = 0; venueIndex < venueCount; venueIndex++) {
       var venue = data.children[venueIndex]
       var screenings = venue.children
@@ -12,8 +16,15 @@ var Mspiff = (function () {
            screeningIndex < screenings.length;
            screeningIndex++) {
         var screening = screenings[screeningIndex]
-        var startDate = new Date(screening.getAttribute( "data-start" ))
-        var endDate = new Date(screening.getAttribute( "data-end" ))
+        var startDate = new Date(screening.getAttribute( "data-start"))
+        var endDate = new Date(screening.getAttribute( "data-end"))
+        if ( minTs === null || startDate < minTs ) {
+          minTs = startDate;
+        }
+        if ( maxTs === null || endDate > maxTs ) {
+          maxTs = endDate;
+        }
+
         var item = { id: screening.getAttribute("id")
                      , start: startDate
                      , end: endDate
@@ -33,6 +44,8 @@ var Mspiff = (function () {
         { zoomable: false
           , moveable: true
           , showCurrentTime: false
+          , min: minTs
+          , max: maxTs
         }
     var timeline = new vis.Timeline( node
                                      , new vis.DataSet(items)
@@ -41,23 +54,12 @@ var Mspiff = (function () {
                                    )
   }
 
-  renderTimeline = function () {
-    console.log( "RENDER TIMELINE" )
-    var data = document.getElementById("schedule-data")
-    var dayCount = data.getAttribute("data-day-count")
-    for (day = 1; day <= dayCount; day++) {
-      console.log( "RENDER DAY " + day );
-      renderDay(day);
-    }
-  }
-
   function init () {
-    //var tid = h$main(h$mainZCZCMainzimain)
     console.log( "BOOTED: " + tid )
   }
 
   return { init : init
-           , renderTimeline : renderTimeline
+           , renderDayTimeline : renderDayTimeline
          }
 })()
 

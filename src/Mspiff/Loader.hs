@@ -7,9 +7,47 @@ import Data.Aeson hiding (Array)
 import Data.List
 import qualified Data.List.NonEmpty as NE
 import qualified Data.List as DL
-import Data.Maybe
 
 import Mspiff.Model
+
+filmOf :: Screening -> Film
+filmOf = undefined
+
+tieOthers :: NE.NonEmpty Screening -> [Screening]
+tieOthers = DL.foldr tie [] . NE.toList
+  where
+    findOthers :: Screening -> [Screening]
+    findOthers s = filmScreenings (filmOf s) \\ [s]
+    tie s acc
+      | s `elem` acc = acc
+      | otherwise =
+          case findOthers s of
+            [o1,o2,o3,o4] ->
+              let s'  = s {others = os' \\ [s']}
+                  o1' = o1 {others = os' \\ [o1']}
+                  o2' = o2 {others = os' \\ [o2']}
+                  o3' = o3 {others = os' \\ [o3']}
+                  o4' = o4 {others = os' \\ [o4']}
+                  os' = [s',o1',o2',o3',o4']
+              in os' ++ acc
+            [o1,o2,o3] ->
+              let s'  = s {others = os' \\ [s']}
+                  o1' = o1 {others = os' \\ [o1']}
+                  o2' = o2 {others = os' \\ [o2']}
+                  o3' = o3 {others = os' \\ [o3']}
+                  os' = [s',o1',o2',o3']
+              in os' ++ acc
+            [o1,o2] ->
+              let s'  = s {others = [o1',o2']}
+                  o1' = o1 {others = [s',o2']}
+                  o2' = o2 {others = [s',o1']}
+              in s' : o1' : o2' : acc
+            [o1] ->
+              let s' = s {others = [o1']}
+                  o1' = o1 {others = [s']}
+              in s' : o1' : acc
+
+            _ -> s : acc
 
 loadCatalog :: BS.ByteString -> Maybe Catalog
 loadCatalog = maybe Nothing update . decode'
@@ -36,24 +74,14 @@ update (Catalog _films _screenings) = Just (Catalog films screenings)
         set f = f { filmScreenings = screeningsFor schedule f }
 
     screenings :: [Screening]
-    screenings = DL.sort $ DL.concat $ tie <$> NE.groupAllWith scFilmId screenings0
-      where
-        tie :: NE.NonEmpty Screening -> [Screening]
-        tie ss = fmap set list
-          where
-            list = NE.toList ss
-            set s = s { others = list \\ [s] }
+    screenings =
+      DL.sort $ DL.concat $ tieOthers <$> NE.groupAllWith scFilmId screenings0
 
     films :: [Film]
     films = set <$> films0
       where
         schedule = Schedule screenings
         set f = f { filmScreenings = screeningsFor schedule f }
-
-{-                
-filmOf :: Screening -> Film
-filmOf s = fromJust $ DL.find (\f -> filmId f == scFilmId s) films
--}
 
 screeningsFor :: WholeSchedule -> Film -> [Screening]
 screeningsFor s f = sort $ filter (filt f) (scheduleScreenings s)

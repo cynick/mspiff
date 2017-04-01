@@ -55,40 +55,6 @@ library
                       , ExtendedDefaultRules
                       , RecordWildCards
 
-executable mspiff
-  main-is:           src/Main.hs
-  build-depends:     base
-                   , mspiff
-                   , mtl
-                   , text
-                   , time
-                   , containers
-                   , unordered-containers
-                   , split
-                   , bytestring
-                   , aeson
-                   , vector
-                   , binary
-                   , split
-                   , file-embed
-                   , lucid
-                   , tagsoup
-                   , http-client
-                   , uri-encode
-                   , data-default
-                   , ghcjs-jquery
-                   , ghcjs-base
-                   , ghcjs-prim
-
-  default-language:    Haskell2010
-  default-extensions: OverloadedStrings
-                      , FlexibleContexts
-                      , GeneralizedNewtypeDeriving
-                      , TupleSections
-                      , TemplateHaskell
-                      , ExtendedDefaultRules
-                      , RecordWildCards
-
 test-suite test
     type:              exitcode-stdio-1.0
     main-is:           Runner.hs

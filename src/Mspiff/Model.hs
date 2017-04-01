@@ -141,6 +141,11 @@ type ViewableSchedule = Schedule
 showtimeToUtc :: Screening -> UTCTime
 showtimeToUtc = posixSecondsToUTCTime . fromIntegral . showtime
 
+dayOf :: Screening -> Day
+dayOf = localDay . zonedTimeToLocalTime . utcToZonedTime tz . showtimeToUtc
+  where
+    tz = hoursToTimeZone (-5)
+
 data Catalog = Catalog
   { films :: [Film]
   , screenings :: [Screening]

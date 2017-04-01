@@ -14,11 +14,6 @@ import Lucid.Bootstrap
 
 import Mspiff.Model
 
-dayOf :: Screening -> Day
-dayOf = localDay . zonedTimeToLocalTime . utcToZonedTime tz . showtimeToUtc
-  where
-    tz = hoursToTimeZone (-5)
-
 page :: Catalog -> Html ()
 page = doctypehtml_ . renderWholeSchedule
 

@@ -30,13 +30,16 @@ import Mspiff.Html
 catalogJson :: BS.ByteString
 catalogJson = $(embedFile "data/catalog")
 
+foreign import javascript unsafe "Mspiff.renderTimeline()" renderTimeline :: IO ()
+
 main = do
   let
     Just catalog = loadCatalog (LBS.fromStrict catalogJson)
     html = renderText (renderWholeSchedule catalog)
     html' = textToJSString (T.toStrict html)
-  b <- select "body"
-  replaceWith html' b
+  select "body" >>= append html'
+
+  renderTimeline
 
 {-
 handler :: JQuery -> Event -> IO ()

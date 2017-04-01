@@ -14,7 +14,7 @@ import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as T
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString as BS
-
+import qualified Data.List as DL
 import Data.FileEmbed
 
 import JavaScript.JQuery
@@ -30,7 +30,8 @@ import Mspiff.Html
 catalogJson :: BS.ByteString
 catalogJson = $(embedFile "data/catalog")
 
-foreign import javascript unsafe "Mspiff.renderTimeline()" renderTimeline :: IO ()
+foreign import javascript unsafe "Mspiff.renderDayTimeline($1)"
+ renderDayTimeline :: Int -> IO ()
 
 main = do
   let
@@ -38,8 +39,8 @@ main = do
     html = renderText (renderWholeSchedule catalog)
     html' = textToJSString (T.toStrict html)
   select "body" >>= append html'
-
-  renderTimeline
+  let days = DL.length $ DL.nub $ dayOf <$> screenings catalog
+  mapM_ renderDayTimeline [1..days]
 
 {-
 handler :: JQuery -> Event -> IO ()

@@ -15,7 +15,9 @@ import Lucid.Bootstrap
 import Mspiff.Model
 
 dayOf :: Screening -> Day
-dayOf = utctDay . showtimeToUtc
+dayOf = localDay . zonedTimeToLocalTime . utcToZonedTime tz . showtimeToUtc
+  where
+    tz = hoursToTimeZone (-5)
 
 page :: Catalog -> Html ()
 page = doctypehtml_ . renderWholeSchedule
@@ -35,7 +37,7 @@ script s =
 renderWholeSchedule :: Catalog -> Html ()
 renderWholeSchedule (Catalog films ss) = body
   where
-    body = div_ [id_ "container"] (dataContainer >> timelineContainer >> renderTimeline)
+    body = div_ [id_ "container"] (dataContainer >> timelineContainer)
     days = NE.groupAllWith dayOf ss
     dataContainer =
       div_ [ id_ "schedule-data"
@@ -53,7 +55,6 @@ renderWholeSchedule (Catalog films ss) = body
     renderDayTimeline d =
       div_ [ id_ ("day-timeline-" <> toText d) ] ""
     renderDays = mapM_ (renderDayData films) (DL.zip [1..] days)
-    renderTimeline = script_ "Mspiff.renderTimeline()"
 
 renderDayData :: [Film] -> (Int, NonEmpty Screening) -> Html ()
 renderDayData films (day, ss) = container renderVenues

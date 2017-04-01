@@ -3,26 +3,24 @@ module Test.SchedulerTest (tests, tests1,lastTest) where
 import Prelude hiding (map)
 
 import Test.HUnit
-import qualified Data.Map.Strict as M
 import qualified Data.List as DL
-import Data.These
-import Data.Maybe
-
+import qualified Data.Map.Strict as M
 import Mspiff.Model
-import Mspiff.Loader
 import Mspiff.Scheduler
-import TestUtil
 
-at :: Assertion
-at = assertBool "" True
+import Test.TestUtil
 
-w = Schedule screenings
-mt f = mapThese f f
-other = fromJust . otherScreening
-s = screenings !! 100
-s' = other s
+w :: WholeSchedule
+w = Schedule screenings_
 
-s0 = fs 288
+s1 :: Screening
+s1 = fs 11
+
+s1' :: Screening
+s1' = others s1 !! 0
+
+s0 :: Screening
+s0 = fs 248
 {-
 s1 = addScreening s M.empty
 s2 = addScreening s' s1
@@ -39,85 +37,87 @@ tests' :: [Test]
 tests' =
     [ "test0" ~: at
     , "testAdd0"  ~: do
-       let (msp:_) = M.elems (addScreening s0 M.empty)
-       mt (screeningId . screening) msp @?= This 288
-       mt status msp @?= This Scheduled
+       let (ScreeningGroup sg:_) = M.elems (addScreening s0 M.empty)
+       (screeningId . screening) <$> sg @?= [248]
+       status <$> sg @?= [Scheduled]
+
     , "testAddRemove0"  ~: do
-       let s1 = (removeFilm s0 (addScreening s0 M.empty))
-       DL.length s1 @?= 0
+       let s = removeFilm s0 (addScreening s0 M.empty)
+       DL.length s @?= 0
     , "testAddRemove1"  ~: do
-       let s1 = (removeFilm s (addScreening s M.empty))
-       DL.length s1 @?= 0
+       let s = removeFilm s1 (addScreening s1 M.empty)
+       DL.length s @?= 0
     , "testAddRemove2"  ~: do
-       let s1 = (removeFilm s (addScreening s (addScreening s0 M.empty)))
-       DL.length s1 @?= 1
+       let s = removeFilm s0 (addScreening s1 (addScreening s0 M.empty))
+       DL.length s @?= 1
     , "testRuleOut0"  ~: do
-       let (msp:_) = M.elems (ruleOutScreening s0 M.empty)
-       mt (screeningId . screening) msp @?= This 288
-       mt status msp @?= This RuledOut
+       let (ScreeningGroup sg:_) = M.elems (ruleOutScreening s0 M.empty)
+       (screeningId . screening) <$> sg @?= [248]
+       status <$> sg @?= [RuledOut]
     , "testAddRuleOut"  ~: do
-       let (msp:_) = M.elems (ruleOutScreening s0 (addScreening s0 M.empty))
-       mt (screeningId . screening) msp @?= This 288
-       mt status msp @?= This RuledOut
+       let (ScreeningGroup sg:_) = M.elems (ruleOutScreening s0 (addScreening s0 M.empty))
+       (screeningId . screening) <$> sg @?= [248]
+       status <$> sg @?= [RuledOut]
     , "testAdd0Twice"  ~: do
-       let (msp:_) = M.elems (addScreening s0 (addScreening s0 M.empty))
-       mt (screeningId . screening) msp @?= This 288
-       mt status msp @?= This Scheduled
+       let (ScreeningGroup sg:_) = M.elems (addScreening s0 (addScreening s0 M.empty))
+       (screeningId . screening) <$> sg @?= [248]
+       status <$> sg @?= [Scheduled]
     , "testAdd<"  ~: do
-       let (msp:_) = M.elems (addScreening s M.empty)
-       mt (screeningId . screening) msp @?= These 325 326
-       mt status msp @?= These Scheduled OtherScheduled
+       let (ScreeningGroup sg:_) = M.elems (addScreening s1 M.empty)
+       (screeningId . screening) <$> sg @?= [11,38]
+       status <$> sg @?= [Scheduled, OtherScheduled]
     , "testAdd>"  ~: do
-       let (msp:_) = M.elems (addScreening s' M.empty)
-       mt status msp @?= These OtherScheduled Scheduled
-       mt (screeningId . screening) msp @?= These 325 326
+       let (ScreeningGroup sg:_) = M.elems (addScreening s1' M.empty)
+       DL.length sg @?= 2
+       status <$> sg @?= [OtherScheduled, Scheduled]
+       (screeningId . screening) <$> sg @?= [325, 200]
     , "testAdd<<"  ~: do
-       let (msp:_) = M.elems (addScreening s (addScreening s M.empty))
-       mt status msp @?= These Scheduled OtherScheduled
-       mt (screeningId . screening) msp @?= These 325 326
+       let (ScreeningGroup sg:_) = M.elems (addScreening s1 (addScreening s1 M.empty))
+       status <$> sg @?= [Scheduled, OtherScheduled]
+       (screeningId . screening) <$> sg @?= [325, 200]
     , "testAdd>>"  ~: do
-       let (msp:_) = M.elems (addScreening s' (addScreening s' M.empty))
-       mt status msp @?= These OtherScheduled Scheduled
-       mt (screeningId . screening) msp @?= These 325 326
+       let (ScreeningGroup sg:_) = M.elems (addScreening s1' M.empty)
+       status <$> sg @?= [OtherScheduled, Scheduled]
+       (screeningId . screening) <$> sg @?= [325, 200]
     , "testAdd<>"  ~: do
-       let (msp:_) = M.elems (addScreening s' (addScreening s M.empty))
-       mt status msp @?= These OtherScheduled Scheduled
-       mt (screeningId . screening) msp @?= These 325 326
+       let (ScreeningGroup sg:_) = M.elems (addScreening s1' M.empty)
+       status <$> sg @?= [OtherScheduled, Scheduled]
+       (screeningId . screening) <$> sg @?= [325, 200]
     , "testAdd><"  ~: do
-       let (msp:_) = M.elems (addScreening s (addScreening s' M.empty))
-       mt status msp @?= These Scheduled OtherScheduled
-       mt (screeningId . screening) msp @?= These 325 326
+       let (ScreeningGroup sg:_) = M.elems (addScreening s1 (addScreening s1' M.empty))
+       status <$> sg @?= [Scheduled, OtherScheduled]
+       (screeningId . screening) <$> sg @?= [325, 200]
     , "testAdd><"  ~: do
-       let (msp1:msp2:_) = M.elems (addScreening s (addScreening s0 M.empty))
-       mt status msp1 @?= This Scheduled
-       mt (screeningId . screening) msp1 @?= This 288
-       mt status msp2 @?= These Scheduled OtherScheduled
-       mt (screeningId . screening) msp2 @?= These 325 326
+       let (ScreeningGroup sg1:ScreeningGroup sg2:_) = M.elems (addScreening s1 (addScreening s0 M.empty))
+       status <$> sg1 @?= [Scheduled]
+       (screeningId . screening) <$> sg1 @?= [248]
+       status <$> sg2 @?= [Scheduled, OtherScheduled]
+       (screeningId . screening) <$> sg2 @?= [325, 200]
     , "testRuleOut<"  ~: do
-       let (msp1:_) = M.elems (ruleOutScreening s (addScreening s M.empty))
-       mt status msp1 @?= These RuledOut Scheduled
-       mt pinned msp1 @?= These Unpinned Pinned
-       mt (screeningId . screening) msp1 @?= These 325 326
+       let (ScreeningGroup sg1:_) = M.elems (ruleOutScreening s1 (addScreening s1 M.empty))
+       status <$> sg1 @?= [RuledOut, Scheduled]
+       pinned <$> sg1 @?= [Unpinned, Pinned]
+       (screeningId . screening) <$> sg1 @?= [325, 200]
     , "testRuleOut>"  ~: do
-       let (msp1:_) = M.elems (ruleOutScreening s' (addScreening s' M.empty))
-       mt status msp1 @?= These Scheduled RuledOut
-       mt pinned msp1 @?= These Pinned Unpinned
-       mt (screeningId . screening) msp1 @?= These 325 326
+       let (ScreeningGroup sg1:_) = M.elems (ruleOutScreening s1' (addScreening s1' M.empty))
+       status <$> sg1 @?= [Scheduled, RuledOut]
+       pinned <$> sg1 @?= [Pinned, Unpinned]
+       (screeningId . screening) <$> sg1 @?= [325, 200]
     , "testRuleOutBoth"  ~: do
-       let (msp1:_) = M.elems (ruleOutScreening s (ruleOutScreening s' (addScreening s M.empty)))
-       mt status msp1 @?= These RuledOut RuledOut
-       mt pinned msp1 @?= These Unpinned Unpinned
-       mt (screeningId . screening) msp1 @?= These 325 326
+       let (ScreeningGroup sg1:_) = M.elems (ruleOutScreening s1 (ruleOutScreening s1' (addScreening s1 M.empty)))
+       status <$> sg1 @?= [RuledOut, RuledOut]
+       pinned <$> sg1 @?= [Unpinned, Unpinned]
+       (screeningId . screening) <$> sg1 @?= [325, 200]
     , "testPin<"  ~: do
-       let (msp1:_) = M.elems (pinScreening s (addScreening s M.empty))
-       mt status msp1 @?= These Scheduled RuledOut
-       mt pinned msp1 @?= These Pinned Unpinned
-       mt (screeningId . screening) msp1 @?= These 325 326
+       let (ScreeningGroup sg1:_) = M.elems (pinScreening s1 (addScreening s1 M.empty))
+       status <$> sg1 @?= [Scheduled, RuledOut]
+       pinned <$> sg1 @?= [Pinned, Unpinned]
+       (screeningId . screening) <$> sg1 @?= [325, 200]
     , "testPin>"  ~: do
-       let (msp1:_) = M.elems (pinScreening s' (addScreening s' M.empty))
-       mt status msp1 @?= These RuledOut Scheduled
-       mt pinned msp1 @?= These Unpinned Pinned
-       mt (screeningId . screening) msp1 @?= These 325 326
+       let (ScreeningGroup sg1:_) = M.elems (pinScreening s1' (addScreening s1' M.empty))
+       status <$> sg1 @?= [RuledOut, Scheduled]
+       pinned <$> sg1 @?= [Unpinned, Pinned]
+       (screeningId . screening) <$> sg1 @?= [100, 200, 325]
     , "testScheduleOne" ~: do
        let
          st = addScreening s0 M.empty
@@ -126,26 +126,27 @@ tests' =
        [a] @?= [s0]
     , "testScheduleTwo" ~: do
        let
-         st = addScreening s (addScreening s0 M.empty)
+         st = addScreening s1 (addScreening s0 M.empty)
          (st',Just (Schedule [a,b])) = viewableScheduleFor w st
        st' @?= st
        print b
-       [b,a] @?= [s,s0]
+       [b,a] @?= [s1,s0]
     , "testScheduleFourOverlapping" ~: do
        let
          sids = [293,115,265,57]
-         st = foldr (\sid st -> addScreening (fs sid) st) M.empty sids
+         st = foldr (\sid st_ -> addScreening (fs sid) st_) M.empty sids
          (st',Just (Schedule s)) = viewableScheduleFor w st
        st' @?= st
        print s
     , "testScheduleFourOverlappingWithOneRuledOut" ~: do
        let
          sids = [293,115,265,57]
-         st = foldr (\sid st -> addScreening (fs sid) st) M.empty sids
+         st = foldr (\sid st_ -> addScreening (fs sid) st_) M.empty sids
          st' = ruleOutScreening (fs 56) st
          (st'',Just (Schedule s)) = viewableScheduleFor w st'
        st'' @?= st'
        print s
+
     ]
 
 tests :: Test
@@ -156,4 +157,3 @@ tests1 = (tests' !!)
 
 lastTest :: Test
 lastTest = last tests'
-

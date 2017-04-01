@@ -6,31 +6,27 @@ import Test.HUnit
 import Test.QuickCheck
 import qualified Data.Map.Strict as M
 import qualified Data.List as DL
-import Data.These
-import Data.Maybe
-import Data.Array
 import Control.Monad
 
 import Mspiff.Model
 import Mspiff.Loader
 import Mspiff.Scheduler
-import TestUtil
+import Test.TestUtil
 
-at :: Assertion
-at = assertBool "" True
+s11 = fs 11
 
 tests' :: [Test]
 tests' =
     [ "testCyclicOther" ~:
---      join (map others <$> others s326) @?= Just [326]
+       join (fmap others <$> others s11) @?= Just [11]
         at
     ]
 
 tests :: Test
 tests = TestList tests'
 
-tests1 :: Test
-tests1 = tests' !! 1
+tests1 :: Int -> Test
+tests1 = (tests' !!)
 
 lastTest :: Test
 lastTest = last tests'

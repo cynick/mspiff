@@ -1,4 +1,3 @@
-
 module Mspiff.Scheduler where
 
 import Prelude
@@ -17,7 +16,7 @@ import Mspiff.Loader
 newtype ScreeningGroup = ScreeningGroup
   { unGroup :: [MarkedScreening]
   }
-  deriving Show
+  deriving (Show,Eq)
 
 type ScheduleState = M.Map FilmId ScreeningGroup
 

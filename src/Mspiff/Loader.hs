@@ -66,19 +66,12 @@ update (Catalog _films _screenings) = Just (Catalog films screenings)
             setOverlapping s =
               s { overlapping = findOverlapping s }
 
-    films0 :: [Film]
-    films0 = computeDeps _films
-      where
-        computeDeps = fmap set
-        schedule = Schedule screenings0
-        set f = f { filmScreenings = screeningsFor schedule f }
-
     screenings :: [Screening]
     screenings =
       DL.sort $ DL.concat $ tieOthers <$> NE.groupAllWith scFilmId screenings0
 
     films :: [Film]
-    films = set <$> films0
+    films = set <$> _films
       where
         schedule = Schedule screenings
         set f = f { filmScreenings = screeningsFor schedule f }

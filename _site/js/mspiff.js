@@ -54,12 +54,20 @@ var Mspiff = (function () {
                                    )
   }
 
+  function turnOffSpinner () {
+    console.log( "TURN OFF SPINNER" )
+    $("#loading").css('visibility','hidden')
+  }
+
   function init () {
-    console.log( "BOOTED: " + tid )
+    var tid = h$main(h$mainZCMainzimain);
+    console.log( "TID: " + tid )
   }
 
   return { init : init
+           , turnOffSpinner : turnOffSpinner
            , renderDayTimeline : renderDayTimeline
          }
 })()
+$(document).ready( Mspiff.init )
 

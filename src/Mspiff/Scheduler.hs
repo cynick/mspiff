@@ -77,20 +77,6 @@ unPinScreening ::
   ScheduleState
 unPinScreening = addScreening
 
-{-
-updateSchedule ::
-  Catalog ->
-  WholeSchedule ->
-  ScheduleState -> ScheduleState
-updateSchedule cat ws st = ret
-  where
-    schedule = viewableScheduleFor ws ms
-    missed = maybe [] (filmsMissedBy cat ws) schedule
-    screeningsOfMissed = concatMap filmScreenings missed
-    ret = maybe ms rebuild schedule
-    rebuild ms = DL.foldl' update [] mss
--}
-
 schedulable :: [ScreeningStatus]
 schedulable = [Scheduled,OtherScheduled]
 

@@ -59,12 +59,13 @@ idFor :: Screening -> JSString
 idFor s = s2js $ "#screening-" <> show (screeningId s)
 
 setupHandlers :: [Screening] -> IO ()
-setupHandlers ss = mapM_ selectorFor ss
+setupHandlers ss = mapM_ handlerFor ss
   where
-    selectorFor s = select (idFor s) >>= click (handler s) def
-    setColor c s =
-      select (idFor s) >>= parent >>= parent >>= setCss "background-color" c
+    nodeFor s = select (idFor s) >>= parent >>= parent
+    handlerFor s = nodeFor s >>= click (handler s) def
+    setColor c s = nodeFor s >>= setCss "background-color" c
     handler s _ = do
+      log "CLICK"
       setColor "green" s
       mapM_ (setColor "orange") (others s)
       mapM_ (setColor "red") (overlapping s)
@@ -75,7 +76,9 @@ main = do
     html = renderText (renderWholeSchedule catalog)
     html' = textToJSString (LT.toStrict html)
     sched = M.empty
+  log "APPEND1"
   select "body" >>= append html'
+  log "APPEND2"
   let
     ss = screenings catalog
     days = DL.length $ DL.nub $ dayOf <$> ss

@@ -9,12 +9,13 @@ import Data.Time
 import Data.Time.Clock.POSIX
 import Data.Monoid
 
+type VenueId = Int
 type FilmId = Int
 type ScreeningId = Int
 type Title = T.Text
 type Showtime = Int
 type Duration = Int
-type Venue = T.Text
+type VenueName = T.Text
 type Url = T.Text
 
 data Film = Film
@@ -49,6 +50,11 @@ instance FromJSON Film where
 
   parseJSON _ = error "invalid film json"
 
+newtype Venue = Venue
+  { venueId :: VenueId
+  , venueName :: VenueName
+  } deriving Show
+
 data Screening = Screening
   { scFilmId :: FilmId
   , screeningId :: ScreeningId
@@ -56,7 +62,7 @@ data Screening = Screening
   , others :: [Screening]
   , showtime :: Showtime
   , duration :: Duration
-  , venue :: Venue
+  , scVenueId :: VenueId
   }
 
 instance Show Screening where
@@ -67,7 +73,7 @@ instance Show Screening where
     ", others = " <> show (screeningId <$> others s) <>
     ", showtime = " <> show (showtime s) <>
     ", duration = " <> show (duration s) <>
-    ", venue = " <> show (venue s) <>
+    ", venue = " <> show (venueId s) <>
     "}"
 
 instance Eq Screening where
@@ -134,7 +140,6 @@ newtype Schedule = Schedule { scheduleScreenings :: [Screening] }
   deriving (Eq,Show,Monoid)
 
 type WholeSchedule = Schedule
-type DaySchedule = Schedule
 type VenueSchedule = Schedule
 type ViewableSchedule = Schedule
 
@@ -146,8 +151,26 @@ dayOf = localDay . zonedTimeToLocalTime . utcToZonedTime tz . showtimeToUtc
   where
     tz = hoursToTimeZone (-5)
 
+data VenueEvent = VenueEvent
+  { eventHtml :: T.Text
+  , eventStart :: UTCTime
+  , eventEnd :: UTCTime
+  , eventId :: ScreeningId
+  }
+
+data VenueDaySchedule = VenueDaySchedule
+  { venue :: Venue
+  , venueEvent :: [VenueEvent]
+  }
+
+data DaySchedule = DaySchedule
+  { day :: Int
+  , venueEvents :: [VenueDaySchedule]
+  }
+
 data Catalog = Catalog
-  { films :: [Film]
+  { venues :: [Venue]
+  , films :: [Film]
   , screenings :: [Screening]
   }
   deriving Show
@@ -155,6 +178,7 @@ data Catalog = Catalog
 instance FromJSON Catalog where
   parseJSON (Object o) =
     Catalog
+      <$> o .: "venues"
       <$> o .: "films"
       <*> o .: "screenings"
   parseJSON _ = error "invalid catalog json"

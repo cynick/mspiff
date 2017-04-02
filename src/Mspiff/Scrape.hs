@@ -2,11 +2,11 @@
 module Mspiff.Scrape
     where
 
-import Mspiff.Model
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
 import qualified Data.List as DL
 import Data.Aeson
+import qualified Data.HashMap.Strict as M
 import qualified Data.ByteString.Lazy as BS
 import Control.Monad
 import Data.Monoid
@@ -19,6 +19,9 @@ import Text.HTML.TagSoup
 
 import Data.Time
 import Data.Time.Clock.POSIX
+
+import Mspiff.Html
+import Mspiff.Model
 
 type Name = T.Text
 data ScrapeScreening = ScrapeScreening
@@ -58,15 +61,23 @@ toDateUrl d = scheduleUrlBase <> T.pack (E.encode str) <> "&"
   where
     str = formatTime defaultTimeLocale "%-m/%d/%y" (UTCTime d 0)
 
+toDaySchedule :: [Screening] -> DaySchedule
+toDaySchedule ss = undefined
+
 writeCatalog :: [ScrapeScreening] -> IO ()
-writeCatalog scrapes = do
-  let
+writeCatalog = BS.writeFile "data/catalog" . encode . buildCatalog
+
+buildCatalog :: [ScrapeScreening] -> Catalog
+buildCatalog scrapes = Catalog venues films screenings daySchedules
+  where
     toName ScrapeScreening{..} = (screeningName, screeningUrl)
     toFilm (idx,(screeningName,screeningUrl)) =
       Film idx screeningName [] screeningUrl
-    names =
+    filmNames =
       DL.sortBy (compare `on` fst) $ DL.nubBy ((==) `on` fst) $ toName <$> scrapes
     films = DL.sort $ toFilm <$> zip [0..] names
+    venueNames = DL.sort $ DL.nub $ screeningVenue <$> scrapes
+    venues = uncurry Venue <$> zip [0..] venueNames
     toScreening (idx, ScrapeScreening{..}) acc =
        Screening
          (filmId (fromJust $ DL.find (\f -> filmTitle f == screeningName) films))
@@ -75,12 +86,13 @@ writeCatalog scrapes = do
          []
          (fromMaybe 0 (fromUtc <$> screeningStartTime))
          screeningDuration
-         screeningVenue
+         (venueId (fromJust $ DL.find (\v -> venueName v == screeningVenue) venues))
          : acc
     screenings =
       DL.sort $ DL.reverse $ foldr toScreening [] (zip [0..] scrapes)
-  BS.writeFile "data/catalog" (encode (Catalog films screenings))
-  return ()
+    filmMap = M.fromList (fmap (\f -> (filmId, f)) films)
+    venueMap = M.fromList (fmap (\v -> (venueId, v)) venues)
+    daySchedules = toDaySchedule <$> NE.groupAllWith dayOf screenings
 
 scrapeAll :: IO [ScrapeScreening]
 scrapeAll = join <$> mapM processUrl (zip days (toDateUrl <$> days))

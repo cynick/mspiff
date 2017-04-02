@@ -46,7 +46,9 @@ import Mspiff.Html
 :def! rd (\t -> (return (":def! r (\\_ -> return (\":rt " ++ t ++ "\"))")))
 
 :def! rt (\t -> return (":m Test.HUnit\n:l test/Test/" ++ t ++ ".hs\nrunTestTT tests"))
-let rc s = let [t,i] = DL.words s in ":m Test.HUnit\n:l test/Test/" ++ t ++ ".hs\nrunTestTT (tests1 " ++ i ++ ")"
+
+let rc s = let pre t = ":m Test.HUnit\n:l test/Test/" ++ t ++ ".hs\nrunTestTT " in case DL.words s of [t,i] -> pre t ++ "(tests1 " ++ i ++ ")"; [t] -> pre t ++ "tests"; _ -> error $ "wrong args for tc:" ++ show s
+
 :def! rc (return . rc)
 
 :def! rl (\t -> return (":m Test.HUnit\n:l test/Test/" ++ t ++ ".hs\nrunTestTT lastTest"))

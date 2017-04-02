@@ -14,40 +14,40 @@ filmOf :: Screening -> Film
 filmOf = undefined
 
 tieOthers :: NE.NonEmpty Screening -> [Screening]
-tieOthers = DL.foldr tie [] . NE.toList
+tieOthers = go . NE.toList
   where
-    findOthers :: Screening -> [Screening]
-    findOthers s = filmScreenings (filmOf s) \\ [s]
-    tie s acc
-      | s `elem` acc = acc
-      | otherwise =
-          case findOthers s of
-            [o1,o2,o3,o4] ->
-              let s'  = s {others = os' \\ [s']}
-                  o1' = o1 {others = os' \\ [o1']}
-                  o2' = o2 {others = os' \\ [o2']}
-                  o3' = o3 {others = os' \\ [o3']}
-                  o4' = o4 {others = os' \\ [o4']}
-                  os' = [s',o1',o2',o3',o4']
-              in os' ++ acc
-            [o1,o2,o3] ->
-              let s'  = s {others = os' \\ [s']}
-                  o1' = o1 {others = os' \\ [o1']}
-                  o2' = o2 {others = os' \\ [o2']}
-                  o3' = o3 {others = os' \\ [o3']}
-                  os' = [s',o1',o2',o3']
-              in os' ++ acc
-            [o1,o2] ->
-              let s'  = s {others = [o1',o2']}
-                  o1' = o1 {others = [s',o2']}
-                  o2' = o2 {others = [s',o1']}
-              in s' : o1' : o2' : acc
-            [o1] ->
-              let s' = s {others = [o1']}
-                  o1' = o1 {others = [s']}
-              in s' : o1' : acc
-
-            _ -> s : acc
+    go [s1,s2,s3,s4,s5] =
+      let
+        s1' = s1 {others = s' \\ [s1']}
+        s2' = s2 {others = s' \\ [s2']}
+        s3' = s3 {others = s' \\ [s3']}
+        s4' = s4 {others = s' \\ [s4']}
+        s5' = s5 {others = s' \\ [s5']}
+        s' = [s1', s2', s3', s4', s5']
+      in s'
+    go [s1,s2,s3,s4] =
+      let
+        s1' = s1 {others = s' \\ [s1']}
+        s2' = s2 {others = s' \\ [s2']}
+        s3' = s3 {others = s' \\ [s3']}
+        s4' = s4 {others = s' \\ [s4']}
+        s' = [s1', s2', s3', s4']
+      in s'
+    go [s1,s2,s3] =
+      let
+        s1' = s1 {others = s' \\ [s1']}
+        s2' = s2 {others = s' \\ [s2']}
+        s3' = s3 {others = s' \\ [s3']}
+        s' = [s1', s2', s3']
+      in s'
+    go [s1,s2] =
+      let
+        s1' = s1 {others = [s2']}
+        s2' = s2 {others = [s1']}
+        s' = [s1', s2']
+      in s'
+    go [s1] = [s1]
+    go x = error $ "unhandled case in tie others " ++ show x
 
 loadCatalog :: BS.ByteString -> Maybe Catalog
 loadCatalog = maybe Nothing update . decode'

@@ -50,10 +50,22 @@ instance FromJSON Film where
 
   parseJSON _ = error "invalid film json"
 
-newtype Venue = Venue
+data Venue = Venue
   { venueId :: VenueId
   , venueName :: VenueName
-  } deriving Show
+  }
+  deriving Show
+
+instance ToJSON Venue where
+  toJSON Venue{..} =
+    object [ "id" .= venueId, "name" .= venueName ]
+
+instance FromJSON Venue where
+  parseJSON (Object o) =
+    Venue
+      <$> o .: "id"
+      <*> o .: "name"
+  parseJSON x = error $ "invalid venue json " ++ show x
 
 data Screening = Screening
   { scFilmId :: FilmId
@@ -73,7 +85,7 @@ instance Show Screening where
     ", others = " <> show (screeningId <$> others s) <>
     ", showtime = " <> show (showtime s) <>
     ", duration = " <> show (duration s) <>
-    ", venue = " <> show (venueId s) <>
+    ", venue = " <> show (scVenueId s) <>
     "}"
 
 instance Eq Screening where
@@ -84,7 +96,7 @@ instance Ord Screening where
     case showtime a `compare` showtime b of
       LT -> LT
       GT -> GT
-      EQ -> venue a `compare` venue b
+      EQ -> scVenueId a `compare` scVenueId b
 
 instance ToJSON Screening where
   toJSON Screening{..} =
@@ -93,7 +105,7 @@ instance ToJSON Screening where
       , "screeningId" .= screeningId
       , "showtime" .= showtime
       , "duration" .= duration
-      , "venue" .= venue
+      , "venue" .= scVenueId
       ]
 
 instance FromJSON Screening where
@@ -151,27 +163,11 @@ dayOf = localDay . zonedTimeToLocalTime . utcToZonedTime tz . showtimeToUtc
   where
     tz = hoursToTimeZone (-5)
 
-data VenueEvent = VenueEvent
-  { eventHtml :: T.Text
-  , eventStart :: UTCTime
-  , eventEnd :: UTCTime
-  , eventId :: ScreeningId
-  }
-
-data VenueDaySchedule = VenueDaySchedule
-  { venue :: Venue
-  , venueEvent :: [VenueEvent]
-  }
-
-data DaySchedule = DaySchedule
-  { day :: Int
-  , venueEvents :: [VenueDaySchedule]
-  }
-
 data Catalog = Catalog
   { venues :: [Venue]
   , films :: [Film]
   , screenings :: [Screening]
+  , visData :: [T.Text]  -- encoded JSON to be fed to Vis.
   }
   deriving Show
 
@@ -179,13 +175,16 @@ instance FromJSON Catalog where
   parseJSON (Object o) =
     Catalog
       <$> o .: "venues"
-      <$> o .: "films"
+      <*> o .: "films"
       <*> o .: "screenings"
+      <*> o .: "visData"
   parseJSON _ = error "invalid catalog json"
 
 instance ToJSON Catalog where
   toJSON Catalog{..} =
     object
-      [ "films" .= films
+      [ "venues" .= venues
+      , "films" .= films
       , "screenings" .= screenings
+      , "visData" .= visData
       ]

@@ -3,6 +3,7 @@ module Main where
 
 import Prelude hiding (log)
 import Control.Monad
+import Control.Arrow
 import Control.Concurrent
 import GHCJS.Foreign
 import GHCJS.Types
@@ -19,6 +20,7 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString as BS
 import qualified Data.List as DL
 import Data.Aeson
+import Data.Maybe
 import Data.Text.Lazy.Encoding
 import Data.FileEmbed
 import Data.Default
@@ -67,35 +69,42 @@ s2js = textToJSString . T.pack
 idFor :: Screening -> JSString
 idFor s = s2js $ "#screening-" <> show (screeningId s)
 
-setupHandlers :: [Screening] -> IO ()
-setupHandlers ss = mapM_ handlerFor ss
+
+type ScreeningMap = M.Map ScreeningId Screening
+
+updateSchedule ::
+  ScreeningMap ->
+  Catalog ->
+  MVar ScheduleState ->
+  JSVal ->
+  IO ()
+updateSchedule smap Catalog{..} _ sid =
+  update >> (log $ "screening " <> show (fromJSInt sid) <> " clicked")
   where
-    nodeFor s = select (idFor s) >>= parent >>= parent
-    handlerFor s = nodeFor s >>= click (handler s) def
-    setColor c s = nodeFor s >>= setCss "background-color" c
-    handler s _ = do
-      log "CLICK"
+    update = do
       setColor "green" s
       mapM_ (setColor "orange") (others s)
       mapM_ (setColor "red") (overlapping s)
-
-updateSchedule :: MVar ScheduleState -> JSVal -> IO ()
-updateSchedule _ sid = do
-  log $ "screening " <> fromJSString sid <> " clicked"
+    s = fromJust (M.lookup (fromJSInt sid) smap)
+    nodeFor s = select (idFor s) >>= parent >>= parent
+    setColor c s = nodeFor s >>= setCss "background-color" c
 
 main = do
   let
     Just catalog = loadCatalog (LBS.fromStrict catalogJson)
     ss = screenings catalog
     visData = buildVisData catalog
-    encodeVisData = textToJSString .LT.toStrict . decodeUtf8 . encode
+    encodeVisData = textToJSString . LT.toStrict . decodeUtf8 . encode
 
     timelineData = zip [0.. ] (encodeVisData <$> visData)
+    screeningMap = M.fromList $ (screeningId &&& id) <$> ss
   mvar <- newMVar M.empty
+
   mapM_ (uncurry renderDayTimeline) timelineData
   turnOffSpinner
-  callback <- syncCallback1 ContinueAsync (updateSchedule mvar)
-  setEventCallback callback
+  let
+    callback = updateSchedule screeningMap catalog mvar
+  setEventCallback =<< syncCallback1 ContinueAsync callback
   setEventHandler
 
 

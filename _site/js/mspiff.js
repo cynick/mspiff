@@ -21,7 +21,7 @@ var Mspiff = (function () {
       var s = $(".screening",this)
       var sid = s.attr('id').substring( "screening-".length )
       console.log("C: " + sid)
-      eventCallback(sid)
+      eventCallback(parseInt(sid))
     }
 
     $('#schedule').on( 'click', '.vis-item-content', {}, handler );

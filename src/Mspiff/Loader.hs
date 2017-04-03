@@ -53,7 +53,7 @@ loadCatalog :: BS.ByteString -> Maybe Catalog
 loadCatalog = maybe Nothing update . decode'
 
 update :: Catalog -> Maybe Catalog
-update (Catalog _films _screenings) = Just (Catalog films screenings)
+update (Catalog venues _films _screenings) = Just (Catalog venues films screenings)
   where
     screenings0 :: [Screening]
     screenings0 = computeDeps . DL.sort $ _screenings

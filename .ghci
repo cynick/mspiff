@@ -31,10 +31,12 @@ import qualified Data.Text.IO as T
 import Test.QuickCheck
 import Text.HTML.TagSoup
 import Lucid
+
 import Mspiff.Model
 import Mspiff.Loader
 import Mspiff.Scheduler
 import Mspiff.Html
+import Mspiff.Vis
 
 :def! rg (\_ -> return ":r\n:g\n")
 :def! Rg (\_ -> return ":r\n:g\n")
@@ -55,9 +57,6 @@ let rc s = let pre t = ":m Test.HUnit\n:l test/Test/" ++ t ++ ".hs\nrunTestTT " 
 
 :def! b (\_ -> return (":l src/main.hs\n:set args build\nmain"))
 :def! rb (\_ -> return (":l src/main.hs\n:set args rebuild\nmain"))
-
-let gp = ":rg\nhtml (page w)\n"
-:def! gp (\_ -> return gp)
 
 let p = mapM_ print
 

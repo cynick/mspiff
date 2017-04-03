@@ -2,15 +2,11 @@ module Mspiff.Html where
 
 import qualified Data.Text as T
 import qualified Data.List as DL
-import qualified Data.List.NonEmpty as NE
-import Data.List.NonEmpty
-import Data.Time
 import Data.Monoid
 import Data.Maybe
 
 import Lucid
 import Lucid.Base
-import Lucid.Bootstrap
 
 import Mspiff.Model
 

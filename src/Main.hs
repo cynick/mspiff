@@ -18,6 +18,8 @@ import qualified Data.Text.Lazy.IO as LT
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString as BS
 import qualified Data.List as DL
+import Data.Aeson
+import Data.Text.Lazy.Encoding
 import Data.FileEmbed
 import Data.Default
 import Data.Monoid
@@ -31,12 +33,13 @@ import Mspiff.Model
 import Mspiff.Loader
 import Mspiff.Scheduler
 import Mspiff.Html
+import Mspiff.Vis
 
 catalogJson :: BS.ByteString
 catalogJson = $(embedFile "data/catalog")
 
-foreign import javascript unsafe "Mspiff.renderDayTimeline($1)"
- renderDayTimeline :: Int -> IO ()
+foreign import javascript unsafe "Mspiff.renderDayTimeline($1,$2)"
+ renderDayTimeline :: Int -> JSString -> IO ()
 
 foreign import javascript unsafe "alert($1)"
  alert :: JSString -> IO ()
@@ -73,16 +76,13 @@ setupHandlers ss = mapM_ handlerFor ss
 main = do
   let
     Just catalog = loadCatalog (LBS.fromStrict catalogJson)
-    html = renderText (renderWholeSchedule catalog)
-    html' = textToJSString (LT.toStrict html)
-    sched = M.empty
-  log "APPEND1"
-  select "body" >>= append html'
-  log "APPEND2"
-  let
     ss = screenings catalog
     days = DL.length $ DL.nub $ dayOf <$> ss
-  mapM_ renderDayTimeline [1..days]
+    visData = buildVisData catalog
+    encodeVisData = LT.toStrict . decodeUtf8 . encode
+
+    timelineData = (zip [1..days] (textToJSString . encodeVisData <$> visData))
+  mapM_ (uncurry renderDayTimeline) timelineData
   turnOffSpinner
   setupHandlers ss
 

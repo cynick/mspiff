@@ -54,7 +54,7 @@ data Venue = Venue
   { venueId :: VenueId
   , venueName :: VenueName
   }
-  deriving Show
+  deriving (Show,Ord,Eq)
 
 instance ToJSON Venue where
   toJSON Venue{..} =
@@ -167,7 +167,6 @@ data Catalog = Catalog
   { venues :: [Venue]
   , films :: [Film]
   , screenings :: [Screening]
-  , visData :: [T.Text]  -- encoded JSON to be fed to Vis.
   }
   deriving Show
 
@@ -177,7 +176,6 @@ instance FromJSON Catalog where
       <$> o .: "venues"
       <*> o .: "films"
       <*> o .: "screenings"
-      <*> o .: "visData"
   parseJSON _ = error "invalid catalog json"
 
 instance ToJSON Catalog where
@@ -186,5 +184,4 @@ instance ToJSON Catalog where
       [ "venues" .= venues
       , "films" .= films
       , "screenings" .= screenings
-      , "visData" .= visData
       ]

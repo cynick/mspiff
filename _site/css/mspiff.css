@@ -22,14 +22,21 @@
   font-size: 10px;
 }
 
-.screening {
-    font-size: 12px;
+.vis-item {
+  font-size: 12px;
 }
 
 .icon-bar a:hover {
-    background-color: #000; /* Add a hover color */
+  background-color: #000; /* Add a hover color */
 }
 
 .active {
-    background-color: #4CAF50; /* Add an active/current color */
+   background-color: #4CAF50; /* Add an active/current color */
 }
+
+.vis-labelset .vis-label .vis-inner {
+  width: 100%;
+  text-align: center;
+  box-sizing: border-box;
+}
+

@@ -12,12 +12,19 @@ var Mspiff = (function () {
                          , new vis.DataSet(data.groups)
                          , data.options
                        )
-    document.body.appendChild(node)
+    var schedule = document.getElementById( "schedule" );
+    schedule.appendChild(node)
   }
 
-  function turnOffSpinner () {
-    console.log( "TURN OFF SPINNER" )
-    $("#loading").css('visibility','hidden')
+  function setEventHandler () {
+    handler = function () {
+      var s = $(".screening",this)
+      var sid = s.attr('id').substring( "screening-".length )
+      console.log("C: " + sid)
+      eventCallback(sid)
+    }
+
+    $('#schedule').on( 'click', '.vis-item-content', {}, handler );
   }
 
   function init () {
@@ -26,8 +33,8 @@ var Mspiff = (function () {
   }
 
   return { init : init
-           , turnOffSpinner : turnOffSpinner
            , renderDayTimeline : renderDayTimeline
+           , setEventHandler : setEventHandler
          }
 })()
 $(document).ready( Mspiff.init )

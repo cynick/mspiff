@@ -7,7 +7,7 @@ import Control.Concurrent
 import GHCJS.Foreign
 import GHCJS.Types
 import GHCJS.Marshal(fromJSVal)
-import GHCJS.Foreign.Callback (Callback, syncCallback1, OnBlocked(ContinueAsync))
+import GHCJS.Foreign.Callback
 import GHCJS.Prim
 import Data.JSString.Text
 
@@ -41,11 +41,17 @@ catalogJson = $(embedFile "data/catalog")
 foreign import javascript unsafe "Mspiff.renderDayTimeline($1,$2)"
  renderDayTimeline :: Int -> JSString -> IO ()
 
+foreign import javascript unsafe "Mspiff.setEventHandler()"
+ setEventHandler :: IO ()
+
 foreign import javascript unsafe "alert($1)"
  alert :: JSString -> IO ()
 
 foreign import javascript unsafe "console.log($1)"
  log_ :: JSVal -> IO ()
+
+foreign import javascript unsafe "eventCallback = $1"
+ setEventCallback :: Callback (JSVal -> IO ()) -> IO ()
 
 turnOffSpinner :: IO ()
 turnOffSpinner = do
@@ -73,17 +79,24 @@ setupHandlers ss = mapM_ handlerFor ss
       mapM_ (setColor "orange") (others s)
       mapM_ (setColor "red") (overlapping s)
 
+updateSchedule :: MVar ScheduleState -> JSVal -> IO ()
+updateSchedule _ sid = do
+  log $ "screening " <> fromJSString sid <> " clicked"
+
 main = do
   let
     Just catalog = loadCatalog (LBS.fromStrict catalogJson)
     ss = screenings catalog
-    days = DL.length $ DL.nub $ dayOf <$> ss
     visData = buildVisData catalog
-    encodeVisData = LT.toStrict . decodeUtf8 . encode
+    encodeVisData = textToJSString .LT.toStrict . decodeUtf8 . encode
 
-    timelineData = (zip [1..days] (textToJSString . encodeVisData <$> visData))
+    timelineData = zip [0.. ] (encodeVisData <$> visData)
+  mvar <- newMVar M.empty
   mapM_ (uncurry renderDayTimeline) timelineData
   turnOffSpinner
-  setupHandlers ss
+  callback <- syncCallback1 ContinueAsync (updateSchedule mvar)
+  setEventCallback callback
+  setEventHandler
+
 
 

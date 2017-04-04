@@ -121,10 +121,23 @@ instance FromJSON Screening where
 
   parseJSON _ = error "invalid screening json"
 
-data Pinned = Pinned | Unpinned deriving (Show,Eq)
+data Pinned = Pinned | Unpinned deriving (Show,Eq,Bounded,Enum)
+
+instance ToJSON Pinned where
+  toJSON = enumToJson
+
+instance FromJSON Pinned where
+  parseJSON = jsonToEnum
+
 data ScreeningStatus =
   Unscheduled | Scheduled | Impossible | RuledOut | OtherScheduled
-  deriving (Enum, Show, Eq)
+  deriving (Show, Eq, Bounded, Enum)
+
+instance ToJSON ScreeningStatus where
+  toJSON = enumToJson
+
+instance FromJSON ScreeningStatus where
+  parseJSON = jsonToEnum
 
 data MarkedScreening = MarkedScreening
   { status :: ScreeningStatus
@@ -133,11 +146,18 @@ data MarkedScreening = MarkedScreening
   }
   deriving Show
 
+instance ToJSON MarkedScreening where
+  toJSON MarkedScreening{..} =
+    object [ "s" .= status
+           , "p" .= pinned
+           , "id" .= screen
+                   
 instance Eq MarkedScreening where
   a == b = screening a == screening b
 
 instance Ord MarkedScreening where
   a `compare` b = screening a `compare` screening b
+
 
 isRuledOut :: MarkedScreening -> Bool
 isRuledOut = (==RuledOut) . status
@@ -185,3 +205,13 @@ instance ToJSON Catalog where
       , "films" .= films
       , "screenings" .= screenings
       ]
+
+newtype ScreeningGroup = ScreeningGroup
+  { unGroup :: [MarkedScreening]
+  }
+  deriving (Show,Eq)
+instance ToJSON ScreeningGroup where
+  toJSON ScreeningGroup{..} =
+     
+
+type ScheduleState = M.Map FilmId ScreeningGroup

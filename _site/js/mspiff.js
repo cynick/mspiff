@@ -4,7 +4,7 @@ var Mspiff = (function () {
     var data = JSON.parse(json)
     var node = document.createElement( 'div' )
 
-    node.setAttribute( "id", "day-timeline-" + id)
+    node.setAttribute("id", "day-timeline-" + id)
 
     var timeline =
        new vis.Timeline( node
@@ -26,14 +26,23 @@ var Mspiff = (function () {
     $('#schedule').on( 'click', '.vis-item-content', {}, handler );
   }
 
+  function setCookie(json) {
+    Cookie.set("data",JSON.parse(json))
+  }
+
+  function getCookie() {
+    return Cookie.get("data")
+  }
+
   function init () {
-    var tid = h$main(h$mainZCMainzimain);
-    console.log( "TID: " + tid )
+    h$main(h$mainZCMainzimain);
   }
 
   return { init : init
            , renderDayTimeline : renderDayTimeline
            , setEventHandler : setEventHandler
+           , getCookie
+           , setCookie
          }
 })()
 $(document).ready( Mspiff.init )

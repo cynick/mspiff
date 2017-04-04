@@ -13,12 +13,6 @@ import Data.Maybe
 import Mspiff.Model
 import Mspiff.Loader
 
-newtype ScreeningGroup = ScreeningGroup
-  { unGroup :: [MarkedScreening]
-  }
-  deriving (Show,Eq)
-
-type ScheduleState = M.Map FilmId ScreeningGroup
 
 mkScreeningGroup ::
   Screening ->

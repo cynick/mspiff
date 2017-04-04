@@ -10,7 +10,6 @@ import GHCJS.Types
 import GHCJS.Marshal(fromJSVal)
 import GHCJS.Foreign.Callback
 import GHCJS.Prim
-import Data.JSString.Text
 
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
@@ -25,7 +24,7 @@ import Data.Text.Lazy.Encoding
 import Data.FileEmbed
 import Data.Default
 import Data.Monoid
-
+import Data.JSString
 import JavaScript.JQuery
 import JavaScript.JQuery.Internal
 
@@ -46,8 +45,11 @@ foreign import javascript unsafe "Mspiff.renderDayTimeline($1,$2)"
 foreign import javascript unsafe "Mspiff.setEventHandler()"
  setEventHandler :: IO ()
 
-foreign import javascript unsafe "alert($1)"
- alert :: JSString -> IO ()
+foreign import javascript unsafe "Mspiff.setCookie($1)"
+ setCookie :: JSString -> IO ()
+
+foreign import javascript unsafe "Mspiff.getCookie()"
+ getCookie :: IO JSString
 
 foreign import javascript unsafe "console.log($1)"
  log_ :: JSVal -> IO ()
@@ -55,6 +57,14 @@ foreign import javascript unsafe "console.log($1)"
 foreign import javascript unsafe "eventCallback = $1"
  setEventCallback :: Callback (JSVal -> IO ()) -> IO ()
 
+newtype PersistScheduleState = PersistScheduleState ScheduleState
+instance ToJSON PersistScheduleState where
+  toJSON (PersistScheduleState s) =
+    let
+      toObject (fid, group) =  object [ "f": fid, "g":  ]
+      pairs = DL.foldr()M.toList s
+    in object [ "fs" .=
+                  
 turnOffSpinner :: IO ()
 turnOffSpinner = do
   node <- select "#loading"
@@ -63,12 +73,8 @@ turnOffSpinner = do
 log :: String -> IO ()
 log x = log_ $ toJSString ("HS: " <> x)
 
-s2js :: String -> JSString
-s2js = textToJSString . T.pack
-
 idFor :: Screening -> JSString
-idFor s = s2js $ "#screening-" <> show (screeningId s)
-
+idFor s = pack $ "#screening-" <> show (screeningId s)
 
 type ScreeningMap = M.Map ScreeningId Screening
 
@@ -78,19 +84,25 @@ updateSchedule ::
   MVar ScheduleState ->
   JSVal ->
   IO ()
-updateSchedule smap Catalog{..} _ sid = do
-  update
-  tid <- myThreadId
-  log $ "Clicked" <> show s <> " from thread " <> show tid
+updateSchedule smap Catalog{..} _ sid =
+  forM_ (M.lookup (fromJSInt sid) smap) $ \s -> do
+    update s
+    tid <- myThreadId
+    log $ "Clicked" <> show s <> " from thread " <> show tid
 
   where
-    update = do
+    update s = do
       setColor "green" s
       mapM_ (setColor "orange") (others s)
       mapM_ (setColor "red") (overlapping s)
-    s = fromJust (M.lookup (fromJSInt sid) smap)
     nodeFor s = select (idFor s) >>= parent >>= parent
     setColor c s = nodeFor s >>= setCss "background-color" c
+
+hsToJs :: ToJSON a => a -> JSString
+hsToJs = pack . T.unpack . LT.toStrict . decodeUtf8 . encode
+
+jsToHs :: FromJSON a => JSString -> Maybe a
+jsToHs = decode' . encodeUtf8 . LT.fromStrict . T.pack . unpack
 
 main :: IO ()
 main = do
@@ -98,10 +110,14 @@ main = do
     Just catalog = loadCatalog (LBS.fromStrict catalogJson)
     ss = screenings catalog
     visData = buildVisData catalog
-    encodeVisData = textToJSString . LT.toStrict . decodeUtf8 . encode
 
-    timelineData = zip [0.. ] (encodeVisData <$> visData)
+    timelineData = DL.zip [0.. ] (hsToJs <$> visData)
     screeningMap = M.fromList $ (screeningId &&& id) <$> ss
+  cookie1 <- jsToHs <$> getCookie
+  log $ "C1: " <> show cookie1
+  setCookie (hsToJs (M.fromList [(1,2),(3,4)] :: M.Map Int Int))
+  cookie2 <- jsToHs <$> getCookie
+  log $ "C2: " <> show cookie2
   mvar <- newMVar M.empty
 
   mapM_ (uncurry renderDayTimeline) (DL.take 3 timelineData)

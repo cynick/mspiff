@@ -20,7 +20,6 @@ var Mspiff = (function () {
     handler = function () {
       var s = $(".screening",this)
       var sid = s.attr('id').substring( "screening-".length )
-      console.log("C: " + sid)
       eventCallback(parseInt(sid))
     }
 

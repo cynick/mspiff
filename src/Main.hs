@@ -78,8 +78,11 @@ updateSchedule ::
   MVar ScheduleState ->
   JSVal ->
   IO ()
-updateSchedule smap Catalog{..} _ sid =
-  update >> (log $ "screening " <> show (fromJSInt sid) <> " clicked")
+updateSchedule smap Catalog{..} _ sid = do
+  update
+  tid <- myThreadId
+  log $ "Clicked" <> show s <> " from thread " <> show tid
+
   where
     update = do
       setColor "green" s
@@ -89,6 +92,7 @@ updateSchedule smap Catalog{..} _ sid =
     nodeFor s = select (idFor s) >>= parent >>= parent
     setColor c s = nodeFor s >>= setCss "background-color" c
 
+main :: IO ()
 main = do
   let
     Just catalog = loadCatalog (LBS.fromStrict catalogJson)
@@ -100,7 +104,7 @@ main = do
     screeningMap = M.fromList $ (screeningId &&& id) <$> ss
   mvar <- newMVar M.empty
 
-  mapM_ (uncurry renderDayTimeline) timelineData
+  mapM_ (uncurry renderDayTimeline) (DL.take 3 timelineData)
   turnOffSpinner
   let
     callback = updateSchedule screeningMap catalog mvar

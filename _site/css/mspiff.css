@@ -3,6 +3,10 @@
     visibility: visible;
 }
 
+body {
+    padding-top: 70px;
+}
+
 .icon-bar {
   width: 25%;
   height: 25%;

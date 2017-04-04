@@ -7,6 +7,11 @@ body {
     padding-top: 70px;
 }
 
+noscript {
+    vertical-align: middle;
+    text-align: center;
+}
+
 .icon-bar {
   width: 25%;
   height: 25%;

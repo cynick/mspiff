@@ -40,7 +40,8 @@ library
                    , data-default
                    , HUnit
                    , QuickCheck
-                   , scientific
+                   , conduit
+                   , stm-conduit
     exposed-modules:   Mspiff.Model
                      , Mspiff.Loader
                      , Mspiff.Scheduler
@@ -79,6 +80,8 @@ executable mspiff
                    , http-client
                    , uri-encode
                    , data-default
+                   , conduit
+                   , stm-conduit
                    , ghcjs-jquery
                    , ghcjs-base
                    , ghcjs-prim

@@ -40,7 +40,8 @@ library
                    , data-default
                    , HUnit
                    , QuickCheck
-
+                   , conduit
+                   , stm-conduit
     exposed-modules:   Mspiff.Model
                      , Mspiff.Loader
                      , Mspiff.Scheduler
@@ -101,3 +102,5 @@ test-suite test
                    , data-default
                    , file-embed
                    , vector
+                   , conduit
+                   , stm-conduit

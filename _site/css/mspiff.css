@@ -12,6 +12,7 @@ noscript {
     text-align: center;
 }
 
+/*
 .icon-bar {
   width: 25%;
   height: 25%;
@@ -31,6 +32,8 @@ noscript {
   font-size: 10px;
 }
 
+*/
+
 .vis-item {
   font-size: 12px;
 }
@@ -47,5 +50,49 @@ noscript {
   width: 100%;
   text-align: center;
   box-sizing: border-box;
+}
+
+.screening {
+
+}
+
+.control {
+
+}
+
+.control-left {
+    float: left;
+    width: 25%;
+}
+
+.ruleout-screening {
+    float: left;
+    width: 25%;
+}
+
+.pin-screening {
+    float: left;
+    width: 25%;
+}
+
+.control-right {
+    float: left;
+    width: 25%;
+}
+
+.remove-film {
+    position:absolute; top:0; right:0;
+}
+
+.fa-times {
+    color: black;
+}
+
+.fa-circle-o {
+    color: black;
+}
+
+.fa-minus {
+    color: black;
 }
 

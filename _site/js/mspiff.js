@@ -16,7 +16,7 @@ var Mspiff = (function () {
     schedule.appendChild(node)
   }
 
-  function setEventHandler () {
+  function setEventHandler() {
     handler = function () {
       var s = $(".screening",this)
       var sid = s.attr('id').substring( "screening-".length )
@@ -27,11 +27,15 @@ var Mspiff = (function () {
   }
 
   function setCookie(json) {
-    Cookie.set("data",JSON.parse(json))
+    Cookies.set("data",JSON.parse(json))
   }
 
   function getCookie() {
-    return Cookie.get("data")
+    return Cookies.get("data") || ""
+  }
+
+  function removeCookie() {
+    return Cookies.remove("data")
   }
 
   function init () {
@@ -43,6 +47,7 @@ var Mspiff = (function () {
            , setEventHandler : setEventHandler
            , getCookie
            , setCookie
+           , removeCookie
          }
 })()
 $(document).ready( Mspiff.init )

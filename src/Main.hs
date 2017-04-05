@@ -57,14 +57,6 @@ foreign import javascript unsafe "console.log($1)"
 foreign import javascript unsafe "eventCallback = $1"
  setEventCallback :: Callback (JSVal -> IO ()) -> IO ()
 
-newtype PersistScheduleState = PersistScheduleState ScheduleState
-instance ToJSON PersistScheduleState where
-  toJSON (PersistScheduleState s) =
-    let
-      toObject (fid, group) =  object [ "f": fid, "g":  ]
-      pairs = DL.foldr()M.toList s
-    in object [ "fs" .=
-                  
 turnOffSpinner :: IO ()
 turnOffSpinner = do
   node <- select "#loading"
@@ -75,8 +67,6 @@ log x = log_ $ toJSString ("HS: " <> x)
 
 idFor :: Screening -> JSString
 idFor s = pack $ "#screening-" <> show (screeningId s)
-
-type ScreeningMap = M.Map ScreeningId Screening
 
 updateSchedule ::
   ScreeningMap ->
@@ -113,12 +103,9 @@ main = do
 
     timelineData = DL.zip [0.. ] (hsToJs <$> visData)
     screeningMap = M.fromList $ (screeningId &&& id) <$> ss
-  cookie1 <- jsToHs <$> getCookie
-  log $ "C1: " <> show cookie1
-  setCookie (hsToJs (M.fromList [(1,2),(3,4)] :: M.Map Int Int))
-  cookie2 <- jsToHs <$> getCookie
-  log $ "C2: " <> show cookie2
-  mvar <- newMVar M.empty
+  cookie <- jsToHs <$> getCookie
+  log $ "C1: " <> show cookie
+  mvar <- newMVar (maybe M.empty (fromPersistState screeningMap) cookie)
 
   mapM_ (uncurry renderDayTimeline) (DL.take 3 timelineData)
   turnOffSpinner

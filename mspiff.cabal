@@ -81,6 +81,7 @@ test-suite test
                       , ExtendedDefaultRules
                       , RecordWildCards
                       , DeriveFunctor
+
     build-depends:   base >=4.9 && <4.10
                    , mspiff
                    , mtl
@@ -99,3 +100,4 @@ test-suite test
                    , uri-encode
                    , data-default
                    , file-embed
+                   , vector

@@ -1,13 +1,16 @@
 module Mspiff.Model where
 
 import Prelude
-
-import Data.Aeson hiding (Array)
+import qualified Data.Map.Strict as M
 import qualified Data.Text as T
-
+import qualified Data.Vector as V
+import qualified Data.List.NonEmpty as NE
+import Data.Aeson
 import Data.Time
 import Data.Time.Clock.POSIX
 import Data.Monoid
+import Data.Maybe
+
 
 type VenueId = Int
 type FilmId = Int
@@ -121,23 +124,38 @@ instance FromJSON Screening where
 
   parseJSON _ = error "invalid screening json"
 
-data Pinned = Pinned | Unpinned deriving (Show,Eq,Bounded,Enum)
+data Pinned = Pinned | Unpinned
+  deriving (Show, Read, Eq, Bounded, Enum)
 
 instance ToJSON Pinned where
-  toJSON = enumToJson
+  toJSON Pinned = Number 0
+  toJSON Unpinned = Number 1
 
 instance FromJSON Pinned where
-  parseJSON = jsonToEnum
+  parseJSON (Number n) = return $ if n == 0 then Pinned else Unpinned
+  parseJSON _ = error "invalid pinned json"
 
 data ScreeningStatus =
   Unscheduled | Scheduled | Impossible | RuledOut | OtherScheduled
-  deriving (Show, Eq, Bounded, Enum)
+  deriving (Show, Read, Eq, Bounded, Enum)
 
 instance ToJSON ScreeningStatus where
-  toJSON = enumToJson
+  toJSON Unscheduled = Number 0
+  toJSON Scheduled = Number 1
+  toJSON Impossible = Number 2
+  toJSON RuledOut = Number 3
+  toJSON OtherScheduled = Number 4
 
 instance FromJSON ScreeningStatus where
-  parseJSON = jsonToEnum
+  parseJSON (Number n) =
+    return $ case n of
+      0 -> Unscheduled
+      1 -> Scheduled
+      2 -> Impossible
+      3 -> RuledOut
+      4 -> OtherScheduled
+      _ -> error "unrecognized screening status"
+  parseJSON _ = error "invalid screening status json"
 
 data MarkedScreening = MarkedScreening
   { status :: ScreeningStatus
@@ -146,12 +164,6 @@ data MarkedScreening = MarkedScreening
   }
   deriving Show
 
-instance ToJSON MarkedScreening where
-  toJSON MarkedScreening{..} =
-    object [ "s" .= status
-           , "p" .= pinned
-           , "id" .= screen
-                   
 instance Eq MarkedScreening where
   a == b = screening a == screening b
 
@@ -210,8 +222,45 @@ newtype ScreeningGroup = ScreeningGroup
   { unGroup :: [MarkedScreening]
   }
   deriving (Show,Eq)
-instance ToJSON ScreeningGroup where
-  toJSON ScreeningGroup{..} =
-     
 
 type ScheduleState = M.Map FilmId ScreeningGroup
+
+newtype PersistState = PersistState [(ScreeningId,ScreeningStatus,Pinned)]
+  deriving Show
+
+instance ToJSON PersistState where
+  toJSON (PersistState ss) =
+    object [ "ps" .= (toObject <$> ss)]
+    where
+      toObject (sid,stat,pinned) =
+        object [ "i" .= sid, "s" .= stat, "p" .= pinned ]
+
+instance FromJSON PersistState where
+  parseJSON (Object o) = do
+    let
+      fromObject (Object o') =
+        (,,) <$> o' .: "i" <*> o' .: "s" <*> o' .: "p"
+      fromObject _ = error $ "invalid persist state json"
+    Array ps <- o .: "ps"
+
+    PersistState <$> mapM fromObject (V.toList ps)
+  parseJSON _ = error $ "invalid persist state json"
+
+toPersistState :: ScheduleState -> PersistState
+toPersistState ss = PersistState $ concat ps
+  where
+    ps = fmap toPs . unGroup <$> M.elems ss
+    toPs MarkedScreening{..} = (screeningId screening, status, pinned)
+
+type ScreeningMap = M.Map ScreeningId Screening
+
+fromPersistState :: ScreeningMap -> PersistState -> ScheduleState
+fromPersistState smap (PersistState ps) =
+  M.fromList $ toScreeningGroup <$> groups
+  where
+    groups =
+      NE.groupAllWith (scFilmId . screening) (fromPs <$> ps)
+    toScreeningGroup ms =
+      (scFilmId . screening $ NE.head ms, ScreeningGroup (NE.toList ms))
+    fromPs (sid, status, pinned) =
+      MarkedScreening status pinned (fromJust (M.lookup sid smap))

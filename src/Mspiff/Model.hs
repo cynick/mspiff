@@ -124,6 +124,8 @@ instance FromJSON Screening where
 
   parseJSON _ = error "invalid screening json"
 
+type ScreeningMap = M.Map ScreeningId Screening
+
 data Pinned = Pinned | Unpinned
   deriving (Show, Read, Eq, Bounded, Enum)
 
@@ -170,30 +172,12 @@ instance Eq MarkedScreening where
 instance Ord MarkedScreening where
   a `compare` b = screening a `compare` screening b
 
-
-isRuledOut :: MarkedScreening -> Bool
-isRuledOut = (==RuledOut) . status
-
-isPinned :: MarkedScreening -> Bool
-isPinned = (==Pinned) . pinned
-
-isOther :: Screening -> Screening -> Bool
-isOther s s' = s /= s' && scFilmId s' == scFilmId s
-
 newtype Schedule = Schedule { scheduleScreenings :: [Screening] }
   deriving (Eq,Show,Monoid)
 
 type WholeSchedule = Schedule
 type VenueSchedule = Schedule
 type ViewableSchedule = Schedule
-
-showtimeToUtc :: Screening -> UTCTime
-showtimeToUtc = posixSecondsToUTCTime . fromIntegral . showtime
-
-dayOf :: Screening -> Day
-dayOf = localDay . zonedTimeToLocalTime . utcToZonedTime tz . showtimeToUtc
-  where
-    tz = hoursToTimeZone (-5)
 
 data Catalog = Catalog
   { venues :: [Venue]
@@ -245,26 +229,6 @@ instance FromJSON PersistState where
 
     PersistState <$> mapM fromObject (V.toList ps)
   parseJSON _ = error "expected persist state json to be object"
-
-toPersistState :: ScheduleState -> PersistState
-toPersistState ss = PersistState $ concat ps
-  where
-    ps = fmap toPs . unGroup <$> M.elems ss
-    toPs MarkedScreening{..} = (screeningId screening, status, pinned)
-
-type ScreeningMap = M.Map ScreeningId Screening
-
-fromPersistState :: ScreeningMap -> PersistState -> ScheduleState
-fromPersistState smap (PersistState ps) =
-  M.fromList $ toScreeningGroup <$> groups
-  where
-    groups =
-      NE.groupAllWith (scFilmId . screening) (fromPs <$> ps)
-    toScreeningGroup ms =
-      (scFilmId . screening $ NE.head ms, ScreeningGroup (NE.toList ms))
-    fromPs (sid, status, pinned) =
-      MarkedScreening status pinned (fromJust (M.lookup sid smap))
-
 
 data Command
   = Add Screening

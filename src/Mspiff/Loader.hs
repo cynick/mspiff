@@ -1,4 +1,6 @@
-module Mspiff.Loader where
+module Mspiff.Loader
+    (loadCatalog)
+where
 
 import Prelude
 
@@ -9,9 +11,34 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.List as DL
 
 import Mspiff.Model
+import Mspiff.ModelUtil
 
-filmOf :: Screening -> Film
-filmOf = undefined
+loadCatalog :: BS.ByteString -> Maybe Catalog
+loadCatalog = maybe Nothing update . decode'
+
+update :: Catalog -> Maybe Catalog
+update (Catalog venues _films _screenings) = Just (Catalog venues films screenings)
+  where
+    screenings0 :: [Screening]
+    screenings0 = computeDeps . DL.sort $ _screenings
+      where
+        computeDeps ss = setOverlapping <$> ss
+          where
+            findOverlapping s =
+              fmap snd . filter overlaps . fmap (s,) $ (ss \\ [s])
+
+            setOverlapping s =
+              s { overlapping = findOverlapping s }
+
+    screenings :: [Screening]
+    screenings =
+      DL.sort $ DL.concat $ tieOthers <$> NE.groupAllWith scFilmId screenings0
+
+    films :: [Film]
+    films = set <$> _films
+      where
+        schedule = Schedule screenings
+        set f = f { filmScreenings = screeningsFor schedule f }
 
 tieOthers :: NE.NonEmpty Screening -> [Screening]
 tieOthers = go . NE.toList
@@ -49,40 +76,4 @@ tieOthers = go . NE.toList
     go [s1] = [s1]
     go x = error $ "unhandled case in tie others " ++ show x
 
-loadCatalog :: BS.ByteString -> Maybe Catalog
-loadCatalog = maybe Nothing update . decode'
-
-update :: Catalog -> Maybe Catalog
-update (Catalog venues _films _screenings) = Just (Catalog venues films screenings)
-  where
-    screenings0 :: [Screening]
-    screenings0 = computeDeps . DL.sort $ _screenings
-      where
-        computeDeps ss = setOverlapping <$> ss
-          where
-            findOverlapping s =
-              fmap snd . filter overlaps . fmap (s,) $ (ss \\ [s])
-
-            setOverlapping s =
-              s { overlapping = findOverlapping s }
-
-    screenings :: [Screening]
-    screenings =
-      DL.sort $ DL.concat $ tieOthers <$> NE.groupAllWith scFilmId screenings0
-
-    films :: [Film]
-    films = set <$> _films
-      where
-        schedule = Schedule screenings
-        set f = f { filmScreenings = screeningsFor schedule f }
-
-screeningsFor :: WholeSchedule -> Film -> [Screening]
-screeningsFor s f = sort $ filter (filt f) (scheduleScreenings s)
-  where filt film sc = scFilmId sc == filmId film
-
-after :: Screening -> Screening -> Bool
-after a b = showtime a > showtime b + duration b
-
-overlaps :: (Screening, Screening) -> Bool
-overlaps (a, b) = not (a `after` b || b `after` a)
 

@@ -9,16 +9,15 @@ import Data.Time
 import Data.Time.Clock.POSIX
 import qualified Data.List as DL
 import Data.Maybe
+import Data.Void
 import Data.Conduit.TMChan
 import Control.Concurrent
-import Control.Monad
 import Control.Monad.State
 import Data.Conduit as C
 import qualified Data.Conduit.Lift as C
-import Mspiff.Model
-import Mspiff.Loader
-import Mspiff.Vis
 
+import Mspiff.Model
+import Mspiff.ModelUtil
 
 mkScreeningGroup ::
   Screening ->
@@ -188,17 +187,22 @@ impossibleTriples w fs = DL.foldr filt [] combos
     filt a b = if DL.null (viewableSchedulesFor' w a) then a:b else b
 
 
-{-               
+runCmd st cmd = st
+
 updateState ::
   (Monad m, MonadIO m) =>
-  C.ConduitM Command () m ()
-updateState redraw = C.evalStateC M.empty $ C.awaitForever $ \cmd -> do
+  (ScheduleState -> ScheduleState -> IO ()) ->
+  C.ConduitM Command Void m ()
+updateState update = C.evalStateC M.empty $ C.awaitForever $ \cmd -> do
   st <- get
-  let st' = runCmd cmd
-  redraw (st, st')
+  let st' = runCmd st cmd
+  liftIO $ update st st'
   put st'
 
-setupLoop = do
-  chan <- newTBMChanIO 10
-  void $ forkIO $ runResourceT $ sourceTBMChan chan $$ updateState
--}
+startSchedulerLoop ::
+  TBMChan Command ->
+  (ScheduleState -> ScheduleState -> IO ()) ->
+  IO ThreadId
+startSchedulerLoop chan update =
+  forkIO $ sourceTBMChan chan $$ updateState update
+

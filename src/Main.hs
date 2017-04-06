@@ -53,6 +53,9 @@ foreign import javascript unsafe "Mspiff.setCookie($1)"
 foreign import javascript unsafe "Mspiff.getCookie()"
  getCookie :: IO JSString
 
+foreign import javascript unsafe "Mspiff.postInit()"
+ postInit :: IO ()
+
 foreign import javascript unsafe "console.log($1)"
  log_ :: JSVal -> IO ()
 
@@ -86,7 +89,9 @@ idFor :: Screening -> JSString
 idFor s = pack $ "#screening-" <> show (screeningId s)
 
 redraw :: Catalog -> ScheduleState -> ScheduleState -> IO ()
-redraw _ old = mapM_ (mapM_ go . unGroup) . M.elems
+redraw _ old = do
+  log "REDRAW"
+  mapM_ (mapM_ go . unGroup) . M.elems
   where
     go :: MarkedScreening -> IO ()
     go MarkedScreening{..} = do
@@ -123,10 +128,9 @@ handleCmd ::
   TBMChan Command ->
   JSVal ->
   IO ()
-handleCmd cmd smap Catalog{..} chan sid =
-  forM_ ms $ \s -> atomically (writeTBMChan chan cmd)
-  where
-    ms = findScreening sid smap
+handleCmd cmd smap Catalog{..} chan sid = do
+  log $ "CMD: " ++ show cmd
+  atomically (writeTBMChan chan cmd)
 
 hsToJs :: ToJSON a => a -> JSString
 hsToJs = pack . T.unpack . LT.toStrict . decodeUtf8 . encode
@@ -154,7 +158,7 @@ main = do
   log $ "C1: " <> show persistState
   chan <- newTBMChanIO 5
 
-  mapM_ (uncurry renderDayTimeline) (DL.take 3 timelineData)
+  mapM_ (uncurry renderDayTimeline) (DL.take 6 timelineData)
   turnOffSpinner
 
   let
@@ -176,5 +180,7 @@ main = do
       ]
 
   zipWithM_ (setCallback screeningMap catalog chan) handlers setHandlers
+  startSchedulerLoop chan (redraw catalog)
   setEventHandlers
+  postInit
 

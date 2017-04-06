@@ -65,6 +65,14 @@ var Mspiff = (function () {
             return false;
           }
         )
+    $('.clear-all').
+      on( 'click', "", {},
+          function () {
+            removeCookie()
+            clearState()
+            return false;
+          }
+        )
   }
 
   function setCookie(json) {
@@ -79,6 +87,10 @@ var Mspiff = (function () {
     return Cookies.remove('data')
   }
 
+  function postInit() {
+    $('.footer').css( 'visibility','visible' )
+  }
+
   function main () {
     h$main(h$mainZCMainzimain);
   }
@@ -89,6 +101,7 @@ var Mspiff = (function () {
            , getCookie : getCookie
            , setCookie : getCookie
            , removeCookie : removeCookie
+           , postInit : postInit
          }
 })()
 $(document).ready( Mspiff.main )

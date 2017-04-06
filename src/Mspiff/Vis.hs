@@ -13,6 +13,7 @@ import Data.Time
 import Lucid
 import Mspiff.Html
 import Mspiff.Model
+import Mspiff.ModelUtil
 import Mspiff.Util
 
 data VisItem = VisItem

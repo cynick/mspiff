@@ -44,6 +44,7 @@ library
                    , stm-conduit
                    , stm
     exposed-modules:   Mspiff.Model
+                     , Mspiff.ModelUtil
                      , Mspiff.Loader
                      , Mspiff.Scheduler
                      , Mspiff.Html
@@ -70,6 +71,7 @@ test-suite test
                   , Test.ModelTest
                   , Mspiff.Loader
                   , Mspiff.Model
+                  , Mspiff.ModelUtil
                   , Mspiff.Scheduler
                   , Mspiff.Html
                   , Mspiff.Scrape

@@ -98,3 +98,9 @@ noscript {
     color: black;
 }
 
+.footer {
+    visibility: hidden;
+    padding-top: 40px;
+    font-size: 10px;
+    text-align: center;
+}

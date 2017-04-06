@@ -17,6 +17,7 @@ import Data.Conduit as C
 import qualified Data.Conduit.Lift as C
 import Mspiff.Model
 import Mspiff.Loader
+import Mspiff.Vis
 
 
 mkScreeningGroup ::

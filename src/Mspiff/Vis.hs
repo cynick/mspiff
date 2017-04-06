@@ -32,6 +32,7 @@ instance ToJSON VisItem where
       , "end" .= endDate
       , "content" .= itemContent
       , "group" .= group
+      , "selectable" .= False
       ]
 
 data VisGroup = VisGroup
@@ -58,6 +59,7 @@ instance ToJSON VisOptions where
     object
       [ "zoomable" .= False
       , "moveable" .= False
+      , "selectable" .= False
       , "showCurrentTime" .= False
       , "min" .= minTs
       , "max" .= maxTs

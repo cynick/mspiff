@@ -43,11 +43,13 @@ var Mspiff = (function () {
           function () {
             var sid = getSidFrom($(this).parents('.screening'))
             if ($(this).hasClass( 'unpinned')) {
+              $(this).attr( 'title', 'Pin Screening' )
               $(this).toggleClass( 'unpinned pinned' )
               $(this).find('.fa').toggleClass( 'fa-circle-o fa-circle')
               pinScreening( sid )
               console.log( "PIN" )
             } else if ( $(this).hasClass( 'pinned' ) ) {
+              $(this).attr( 'title', 'Unpin Screening' )
               $(this).toggleClass( 'pinned unpinned' )
               $(this).find('.fa').toggleClass( 'fa-circle-o fa-circle')
               console.log( "UNPIN" )
@@ -68,6 +70,8 @@ var Mspiff = (function () {
     $('.clear-all').
       on( 'click', "", {},
           function () {
+            $('.vis-item-overflow').css('background-color','rgb(213,221,246)')
+            $('.screening').find('.control').css('visibility','hidden')
             removeCookie()
             clearState()
             return false;
@@ -99,7 +103,7 @@ var Mspiff = (function () {
            , renderDayTimeline : renderDayTimeline
            , setEventHandlers : setEventHandlers
            , getCookie : getCookie
-           , setCookie : getCookie
+           , setCookie : setCookie
            , removeCookie : removeCookie
            , postInit : postInit
          }

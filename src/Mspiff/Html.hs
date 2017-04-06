@@ -44,8 +44,18 @@ controlRight :: Html ()
 controlRight = div_ [class_ "control-left"] (return ())
 
 remove :: Html ()
-remove = div_ [class_ "control ruleout-screening"] (a_ [href_ "#"] $ icon "fa-minus")
+remove = div_ attrs (a_ [href_ "#"] $ icon "fa-minus")
+  where
+    attrs =
+      [ class_ "control ruleout-screening"
+      , at "title" "Rule Out Screening"
+      ]
 
 pin :: Html ()
-pin = div_ [class_ "control pin-screening unpinned"] (a_ [href_ "#"] $ icon "fa-circle-o")
+pin = div_ attrs (a_ [href_ "#"] $ icon "fa-circle-o")
+  where
+    attrs =
+      [ class_ "control pin-screening unpinned"
+      , at "title" "Pin Screening"
+      ]
 

@@ -33,6 +33,7 @@ import JavaScript.JQuery.Internal
 import Lucid
 
 import Mspiff.Model
+import Mspiff.ModelUtil
 import Mspiff.Loader
 import Mspiff.Scheduler
 import Mspiff.Html
@@ -88,21 +89,22 @@ log x = log_ $ toJSString ("HS: " <> x)
 idFor :: Screening -> JSString
 idFor s = pack $ "#screening-" <> show (screeningId s)
 
-redraw :: Catalog -> ScheduleState -> ScheduleState -> IO ()
-redraw _ old = do
-  log "REDRAW"
-  mapM_ (mapM_ go . unGroup) . M.elems
+update :: Catalog -> ScheduleState -> ScheduleState -> IO ()
+update _ old new = do
+  log $ "REDRAW: " ++ show new
+  mapM_ (mapM_ go . unGroup) (M.elems new)
+  setCookie (hsToJs (toPersistState new))
   where
     go :: MarkedScreening -> IO ()
     go MarkedScreening{..} = do
-      case status of
-        Scheduled -> do
-          setColor "green" screening
-          mapM_ (setColor "orange") (others screening)
-          mapM_ (setColor "darkgrey") (overlapping screening)
-
+      setColor screening $ case status of
+        Scheduled -> "green"
+        OtherScheduled -> "orange"
+        RuledOut -> "darkgrey"
+        Impossible -> "red"
+        _ -> "blue"
     nodeFor s = select (idFor s) >>= parent >>= parent
-    setColor c s = nodeFor s >>= setCss "background-color" c
+    setColor s c = nodeFor s >>= setCss "background-color" c >> return ()
 
 findScreening k = M.lookup (fromJSInt k)
 
@@ -180,7 +182,8 @@ main = do
       ]
 
   zipWithM_ (setCallback screeningMap catalog chan) handlers setHandlers
-  startSchedulerLoop chan (redraw catalog)
+  update catalog M.empty state
+  startSchedulerLoop chan (update catalog) state
   setEventHandlers
   postInit
 

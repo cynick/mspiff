@@ -186,14 +186,22 @@ impossibleTriples w fs = DL.foldr filt [] combos
     combos = [[a,b] | a <- fs, b <- fs, c <- fs, filmId a < filmId b && filmId b < filmId c]
     filt a b = if DL.null (viewableSchedulesFor' w a) then a:b else b
 
-
-runCmd st cmd = st
+runCmd :: ScheduleState -> Command -> ScheduleState
+runCmd st cmd =
+  case cmd of
+    Add s -> addScreening s st
+    RuleOut s -> ruleOutScreening s st
+    Pin s -> pinScreening s st
+    UnPin s -> unPinScreening s st
+    RemoveFilm s -> removeFilm s st
+    Clear -> M.empty
 
 updateState ::
   (Monad m, MonadIO m) =>
   (ScheduleState -> ScheduleState -> IO ()) ->
+  ScheduleState ->
   C.ConduitM Command Void m ()
-updateState update = C.evalStateC M.empty $ C.awaitForever $ \cmd -> do
+updateState update orig = C.evalStateC orig $ C.awaitForever $ \cmd -> do
   st <- get
   let st' = runCmd st cmd
   liftIO $ update st st'
@@ -202,7 +210,9 @@ updateState update = C.evalStateC M.empty $ C.awaitForever $ \cmd -> do
 startSchedulerLoop ::
   TBMChan Command ->
   (ScheduleState -> ScheduleState -> IO ()) ->
+  ScheduleState ->
   IO ThreadId
-startSchedulerLoop chan update =
-  forkIO $ sourceTBMChan chan $$ updateState update
+startSchedulerLoop chan update orig =
+  forkIO $ sourceTBMChan chan $$ updateState update orig
+
 

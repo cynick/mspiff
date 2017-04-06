@@ -81,28 +81,29 @@ schedulable :: [ScreeningStatus]
 schedulable = [Scheduled,OtherScheduled]
 
 viewableScheduleFor ::
-  WholeSchedule ->
+  Catalog ->
   ScheduleState ->
-  (ScheduleState, Maybe ViewableSchedule)
-viewableScheduleFor _ st = (st, Schedule <$> schedule)
+  (ScheduleState, Maybe ViewableSchedule, [Film])
+viewableScheduleFor cat st =
+  (st, Schedule <$> schedule, join $ maybeToList filmsMissed)
   where
     schedule = listToMaybe schedules
+    filmsMissed = filmsNotInSchedule cat `fmap` schedule
     schedules = filter (not . null) . filter disjoint . sequence $ lists
     screeningListFor screeningGroup =
       [screening ms | ms <- screeningGroup, status ms `elem` schedulable]
 
     lists = screeningListFor <$> M.elems st
 
-
-viewableSchedulesFor :: WholeSchedule -> [Film] -> [ViewableSchedule]
-viewableSchedulesFor ws fs =
+viewableSchedulesFor :: [Film] -> [ViewableSchedule]
+viewableSchedulesFor fs =
   map Schedule .
   filter (not . null) .
   filter disjoint .
-  sequence $ screeningListsFor ws fs
+  sequence $ screeningListsFor fs
 
-viewableSchedulesFor' :: WholeSchedule -> [Film] -> [ViewableSchedule]
-viewableSchedulesFor' ws fs = map Schedule $ filter (not.null) $ DL.concat $ reduce start
+viewableSchedulesFor' :: [Film] -> [ViewableSchedule]
+viewableSchedulesFor' fs = map Schedule $ filter (not.null) $ DL.concat $ reduce start
   where
     f = DL.foldr ((:) . g) []
     g :: [[[Screening]]] -> [[Screening]]
@@ -114,32 +115,32 @@ viewableSchedulesFor' ws fs = map Schedule $ filter (not.null) $ DL.concat $ red
            then r
            else []
     stitch _ = error "expected to be stitching only lists of one or two elements"
-    start = (filter disjoint . sequence) <$> chunksOf 2 (screeningListsFor ws fs)
+    start = (filter disjoint . sequence) <$> chunksOf 2 (screeningListsFor fs)
     reduce :: [[[Screening]]] -> [[[Screening]]]
     reduce [] = []
     reduce [x] = [x]
     reduce xs = reduce (f (chunksOf 2 xs))
 
-filmsInSchedule :: Catalog -> ViewableSchedule -> [Film]
-filmsInSchedule Catalog{..} (Schedule s) =
-  catMaybes $ flip lookup fps <$> (scFilmId <$> s)
+filmsInSchedule :: Catalog -> [Screening] -> [Film]
+filmsInSchedule Catalog{..} ss =
+  catMaybes $ flip M.lookup filmMap <$> DL.nub (scFilmId <$> ss)
     where
       fps = zip (filmId <$> films) films
 
-filmsNotInSchedule :: Catalog -> ViewableSchedule -> [Film]
-filmsNotInSchedule cat@Catalog{..} vs = films \\ filmsInSchedule cat vs
+filmsNotInSchedule :: Catalog -> [Screening] -> [Film]
+filmsNotInSchedule cat@Catalog{..} ss = films \\ filmsInSchedule cat ss
 
-filmMissedBy :: WholeSchedule -> ViewableSchedule -> Film -> Bool
-filmMissedBy ws (Schedule vs) film = all (not . disjoint) augmentedSchedules
+filmMissedBy :: [Screening] -> Film -> Bool
+filmMissedBy ss film = all (not . disjoint) augmentedSchedules
   where
-    augmentedSchedules = (:vs) `map` screeningsFor ws film
+    augmentedSchedules = (:ss) `map` filmScreenings film
 
-filmsMissedBy :: Catalog -> WholeSchedule -> ViewableSchedule -> [Film]
-filmsMissedBy cat ws vs =
-  filter (filmMissedBy ws vs) (filmsNotInSchedule cat vs)
+filmsMissedBy :: Catalog -> [Screening] -> [Film]
+filmsMissedBy cat@Catalog{..} ss =
+  filter (filmMissedBy ss) (filmsNotInSchedule cat ss)
 
-screeningListsFor :: WholeSchedule -> [Film] -> [[Screening]]
-screeningListsFor = map . screeningsFor
+screeningListsFor :: [Film] -> [[Screening]]
+screeningListsFor = (filmScreenings <$>)
 
 pairsOf' :: [t] -> [(t, t)]
 pairsOf' s = [(x,y) | (x:xs) <- tails s, y <- xs]
@@ -175,45 +176,53 @@ readInt = read
 makeHoles :: Eq a => [a] -> [[a]]
 makeHoles xs = fmap (\x -> xs \\ [x]) xs
 
-impossiblePairs :: WholeSchedule -> [Film] -> [[Film]]
-impossiblePairs w fs = DL.foldr filt [] combos
+impossiblePairs :: [Film] -> [[Film]]
+impossiblePairs fs = DL.foldr filt [] combos
   where
     combos = [[a,b] | a <- fs, b <- fs, filmId a < filmId b]
-    filt a b = if DL.null (viewableSchedulesFor' w a) then a:b else b
+    filt a b = if DL.null (viewableSchedulesFor' a) then a:b else b
 
-impossibleTriples :: WholeSchedule -> [Film] -> [[Film]]
-impossibleTriples w fs = DL.foldr filt [] combos
+impossibleTriples :: [Film] -> [[Film]]
+impossibleTriples fs = DL.foldr filt [] combos
   where
     combos = [[a,b] | a <- fs, b <- fs, c <- fs, filmId a < filmId b && filmId b < filmId c]
-    filt a b = if DL.null (viewableSchedulesFor' w a) then a:b else b
+    filt a b = if DL.null (viewableSchedulesFor' a) then a:b else b
 
-runCmd :: ScheduleState -> Command -> ScheduleState
-runCmd st cmd =
-  case cmd of
-    Add s -> addScreening s st
-    RuleOut s -> ruleOutScreening s st
-    Pin s -> pinScreening s st
-    UnPin s -> unPinScreening s st
-    RemoveFilm s -> removeFilm s st
-    Clear -> M.empty
+runCmd :: Catalog -> ScheduleState -> Command -> ScheduleState
+runCmd cat@Catalog{..} st = schedule . run
+  where
+    run cmd =
+      case cmd of
+        Add s -> addScreening s st
+        RuleOut s -> ruleOutScreening s st
+        Pin s -> pinScreening s st
+        UnPin s -> unPinScreening s st
+        RemoveFilm s -> removeFilm s st
+        Clear -> M.empty
+    schedule st =
+      maybe st' (foldr addScreening st' . scheduleScreenings) vs
+      where
+        (st', vs, missed) = viewableScheduleFor cat st
 
 updateState ::
   (Monad m, MonadIO m) =>
+  Catalog ->
   (ScheduleState -> ScheduleState -> IO ()) ->
   ScheduleState ->
   C.ConduitM Command Void m ()
-updateState update orig = C.evalStateC orig $ C.awaitForever $ \cmd -> do
+updateState catalog update orig = C.evalStateC orig $ C.awaitForever $ \cmd -> do
   st <- get
-  let st' = runCmd st cmd
+  let st' = runCmd catalog st cmd
   liftIO $ update st st'
   put st'
 
 startSchedulerLoop ::
   TBMChan Command ->
+  Catalog ->
   (ScheduleState -> ScheduleState -> IO ()) ->
   ScheduleState ->
   IO ThreadId
-startSchedulerLoop chan update orig =
-  forkIO $ sourceTBMChan chan $$ updateState update orig
+startSchedulerLoop chan catalog update orig =
+  forkIO $ sourceTBMChan chan $$ updateState catalog update orig
 
 

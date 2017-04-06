@@ -3,12 +3,13 @@ module Mspiff.Loader
 where
 
 import Prelude
-
+import Control.Arrow
 import qualified Data.ByteString.Lazy as BS
 import Data.Aeson hiding (Array)
 import Data.List
 import qualified Data.List.NonEmpty as NE
 import qualified Data.List as DL
+import qualified Data.Map.Strict as M
 
 import Mspiff.Model
 import Mspiff.ModelUtil
@@ -16,8 +17,12 @@ import Mspiff.ModelUtil
 loadCatalog :: BS.ByteString -> Maybe Catalog
 loadCatalog = maybe Nothing update . decode'
 
+screeningsFor :: [Screening] -> Film -> [Screening]
+screeningsFor ss f = DL.sort $ filter (filt f) ss
+  where filt film sc = scFilmId sc == filmId film
+
 update :: Catalog -> Maybe Catalog
-update (Catalog venues _films _screenings) = Just (Catalog venues films screenings)
+update (Catalog venues _films _screenings _ _) = Just Catalog{..}
   where
     screenings0 :: [Screening]
     screenings0 = computeDeps . DL.sort $ _screenings
@@ -37,8 +42,9 @@ update (Catalog venues _films _screenings) = Just (Catalog venues films screenin
     films :: [Film]
     films = set <$> _films
       where
-        schedule = Schedule screenings
-        set f = f { filmScreenings = screeningsFor schedule f }
+        set f = f { filmScreenings = screeningsFor screenings f }
+    screeningMap = M.fromList $ (screeningId &&& id) <$> screenings
+    filmMap = M.fromList $ (filmId &&& id) <$> films
 
 tieOthers :: NE.NonEmpty Screening -> [Screening]
 tieOthers = go . NE.toList

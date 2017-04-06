@@ -10,10 +10,6 @@ import qualified Data.Map.Strict as M
 
 import Mspiff.Model
 
-screeningsFor :: WholeSchedule -> Film -> [Screening]
-screeningsFor s f = DL.sort $ filter (filt f) (scheduleScreenings s)
-  where filt film sc = scFilmId sc == filmId film
-
 after :: Screening -> Screening -> Bool
 after a b = showtime a > showtime b + duration b
 

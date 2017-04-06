@@ -125,27 +125,25 @@ findScreening k = M.lookup (fromJSInt k)
 
 handleScreeningCmd ::
   (Screening -> Command) ->
-  ScreeningMap ->
   Catalog ->
   TBMChan Command ->
   JSVal ->
   IO ()
-handleScreeningCmd cmd smap Catalog{..} chan sid = do
+handleScreeningCmd cmd cat@Catalog{..} chan sid = do
   forM_ ms $ \s -> do
     let cmd' = cmd s
     log $ "CMD: " ++ show cmd'
     atomically (writeTBMChan chan cmd')
   where
-    ms = findScreening sid smap
+    ms = findScreening sid screeningMap
 
 handleCmd ::
   Command ->
-  ScreeningMap ->
   Catalog ->
   TBMChan Command ->
   JSVal ->
   IO ()
-handleCmd cmd smap Catalog{..} chan sid = do
+handleCmd cmd _ chan sid = do
   log $ "CMD: " ++ show cmd
   atomically (writeTBMChan chan cmd)
 
@@ -155,26 +153,24 @@ hsToJs = pack . T.unpack . LT.toStrict . decodeUtf8 . encode
 jsToHs :: FromJSON a => JSString -> Maybe a
 jsToHs = decode' . encodeUtf8 . LT.fromStrict . T.pack . unpack
 
-setCallback screeningMap catalog chan handler setter =
+setCallback cat@Catalog{..} chan handler setter =
   setter =<< syncCallback1 ContinueAsync callback
   where
-    callback = handler screeningMap catalog chan
+    callback = handler cat chan
 
 main :: IO ()
 main = do
   let
-    Just catalog = loadCatalog (LBS.fromStrict catalogJson)
-    ss = screenings catalog
+    Just catalog@Catalog{..} = loadCatalog (LBS.fromStrict catalogJson)
     visData = buildVisData catalog
 
     timelineData = DL.zip [0.. ] (hsToJs <$> visData)
-    screeningMap = M.fromList $ (screeningId &&& id) <$> ss
   persistState <- jsToHs <$> getCookie
   let
     state = maybe M.empty (fromPersistState screeningMap) persistState
   chan <- newTBMChanIO 5
 
-  mapM_ (uncurry renderDayTimeline) (DL.take 6 timelineData)
+  mapM_ (uncurry renderDayTimeline) timelineData
   turnOffSpinner
 
   let
@@ -195,9 +191,9 @@ main = do
       , setClearState
       ]
 
-  zipWithM_ (setCallback screeningMap catalog chan) handlers setHandlers
+  zipWithM_ (setCallback catalog chan) handlers setHandlers
   update catalog state state
-  startSchedulerLoop chan (update catalog) state
+  startSchedulerLoop chan catalog (update catalog) state
   setEventHandlers
   postInit
 

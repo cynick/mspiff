@@ -5,6 +5,7 @@ module Mspiff.Scrape
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
 import qualified Data.List as DL
+import qualified Data.Map.Strict as M
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BS
 import Control.Monad
@@ -63,7 +64,7 @@ writeCatalog :: [ScrapeScreening] -> IO ()
 writeCatalog = BS.writeFile "data/catalog" . encode . buildCatalog
 
 buildCatalog :: [ScrapeScreening] -> Catalog
-buildCatalog scrapes = Catalog venues films screenings
+buildCatalog scrapes = Catalog{..}
   where
     toName ScrapeScreening{..} = (screeningName, screeningUrl)
     toFilm (idx,(screeningName,screeningUrl)) =
@@ -85,6 +86,8 @@ buildCatalog scrapes = Catalog venues films screenings
          : acc
     screenings =
       DL.sort $ DL.reverse $ foldr toScreening [] (zip [0..] scrapes)
+    filmMap = M.empty
+    screeningMap = M.empty
 
 scrapeAll :: IO [ScrapeScreening]
 scrapeAll = join <$> mapM processUrl (zip days (toDateUrl <$> days))

@@ -178,6 +178,8 @@ data Catalog = Catalog
   { venues :: [Venue]
   , films :: [Film]
   , screenings :: [Screening]
+  , filmMap :: M.Map FilmId Film
+  , screeningMap :: M.Map ScreeningId Screening
   }
   deriving Show
 
@@ -187,6 +189,9 @@ instance FromJSON Catalog where
       <$> o .: "venues"
       <*> o .: "films"
       <*> o .: "screenings"
+      <*> pure M.empty
+      <*> pure M.empty
+
   parseJSON _ = error "invalid catalog json"
 
 instance ToJSON Catalog where

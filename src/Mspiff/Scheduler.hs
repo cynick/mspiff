@@ -19,12 +19,13 @@ import qualified Data.Conduit.Lift as C
 import Mspiff.Model
 import Mspiff.ModelUtil
 
+type ScreeningGroup = [MarkedScreening]
 mkScreeningGroup ::
   Screening ->
   (Screening -> MarkedScreening) ->
   (Screening -> MarkedScreening) -> ScreeningGroup
 mkScreeningGroup s ms ms' =
-  ScreeningGroup (DL.sort (ms s : (ms' <$> others s)))
+  DL.sort (ms s : (ms' <$> others s))
 
 addScreening ::
   Screening ->
@@ -55,7 +56,7 @@ ruleOutScreening s = M.insertWith f k v
       | screening x == s = merge xs ys (ms s : a)
       | isRuledOut y = merge xs ys (y : a)
       | otherwise = merge xs ys (ms' (screening y) : a)
-    f new old = ScreeningGroup $ merge (unGroup new) (unGroup old) []
+    f new old = merge new old []
 
 removeFilm :: Screening -> ScheduleState -> ScheduleState
 removeFilm = M.delete . scFilmId
@@ -87,8 +88,8 @@ viewableScheduleFor _ st = (st, Schedule <$> schedule)
   where
     schedule = listToMaybe schedules
     schedules = filter (not . null) . filter disjoint . sequence $ lists
-    screeningListFor ScreeningGroup{..} =
-      [screening ms | ms <- unGroup, status ms `elem` schedulable]
+    screeningListFor screeningGroup =
+      [screening ms | ms <- screeningGroup, status ms `elem` schedulable]
 
     lists = screeningListFor <$> M.elems st
 

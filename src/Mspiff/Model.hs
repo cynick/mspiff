@@ -4,13 +4,8 @@ import Prelude
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import qualified Data.Vector as V
-import qualified Data.List.NonEmpty as NE
 import Data.Aeson
-import Data.Time
-import Data.Time.Clock.POSIX
 import Data.Monoid
-import Data.Maybe
-
 
 type VenueId = Int
 type FilmId = Int
@@ -202,12 +197,7 @@ instance ToJSON Catalog where
       , "screenings" .= screenings
       ]
 
-newtype ScreeningGroup = ScreeningGroup
-  { unGroup :: [MarkedScreening]
-  }
-  deriving (Show,Eq)
-
-type ScheduleState = M.Map FilmId ScreeningGroup
+type ScheduleState = M.Map FilmId [MarkedScreening]
 
 newtype PersistState = PersistState [(ScreeningId,ScreeningStatus,Pinned)]
   deriving Show

@@ -40,7 +40,7 @@ dayOf = localDay . zonedTimeToLocalTime . utcToZonedTime tz . showtimeToUtc
 toPersistState :: ScheduleState -> PersistState
 toPersistState ss = PersistState $ concat ps
   where
-    ps = fmap toPs . unGroup <$> M.elems ss
+    ps = fmap toPs <$> M.elems ss
     toPs MarkedScreening{..} = (screeningId screening, status, pinned)
 
 fromPersistState :: ScreeningMap -> PersistState -> ScheduleState
@@ -50,6 +50,6 @@ fromPersistState smap (PersistState ps) =
     groups =
       NE.groupAllWith (scFilmId . screening) (fromPs <$> ps)
     toScreeningGroup ms =
-      (scFilmId . screening $ NE.head ms, ScreeningGroup (NE.toList ms))
+      (scFilmId . screening $ NE.head ms, NE.toList ms)
     fromPs (sid, status, pinned) =
       MarkedScreening status pinned (fromJust (M.lookup sid smap))

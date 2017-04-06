@@ -78,6 +78,12 @@ foreign import javascript unsafe "removeFilm = $1"
 foreign import javascript unsafe "clearState = $1"
  setClearState :: Callback (JSVal -> IO ()) -> IO ()
 
+foreign import javascript unsafe "Mspiff.showControlsFor($1)"
+ showControlsFor :: JSString -> IO ()
+
+foreign import javascript unsafe "Mspiff.hideControlsFor($1)"
+ hideControlsFor :: JSString -> IO ()
+
 turnOffSpinner :: IO ()
 turnOffSpinner = do
   node <- select "#loading"
@@ -92,17 +98,26 @@ idFor s = pack $ "#screening-" <> show (screeningId s)
 update :: Catalog -> ScheduleState -> ScheduleState -> IO ()
 update _ old new = do
   log $ "REDRAW: " ++ show new
-  mapM_ (mapM_ go . unGroup) (M.elems new)
+  mapM_ updateOld oldMS
+  mapM_ updateNew newMS
   setCookie (hsToJs (toPersistState new))
+  log $ "OLD: " ++ show (screeningId . screening <$> oldMS)
+  log $ "NEW: " ++ show (screeningId . screening <$> newMS)
   where
-    go :: MarkedScreening -> IO ()
-    go MarkedScreening{..} = do
+    newMS = DL.sort $ join (M.elems new)
+    oldMS = DL.sort $ join (M.elems old)
+    updateNew ms@MarkedScreening{..} = do
+      showControlsFor (idFor screening)
       setColor screening $ case status of
         Scheduled -> "green"
         OtherScheduled -> "orange"
         RuledOut -> "darkgrey"
         Impossible -> "red"
         _ -> "blue"
+    updateOld ms@MarkedScreening{..} = do
+       when ( ms `notElem` newMS ) $ do
+        setColor screening "rgb(212,221,246)"
+        hideControlsFor (idFor screening)
     nodeFor s = select (idFor s) >>= parent >>= parent
     setColor s c = nodeFor s >>= setCss "background-color" c >> return ()
 
@@ -157,7 +172,6 @@ main = do
   persistState <- jsToHs <$> getCookie
   let
     state = maybe M.empty (fromPersistState screeningMap) persistState
-  log $ "C1: " <> show persistState
   chan <- newTBMChanIO 5
 
   mapM_ (uncurry renderDayTimeline) (DL.take 6 timelineData)
@@ -182,7 +196,7 @@ main = do
       ]
 
   zipWithM_ (setCallback screeningMap catalog chan) handlers setHandlers
-  update catalog M.empty state
+  update catalog state state
   startSchedulerLoop chan (update catalog) state
   setEventHandlers
   postInit

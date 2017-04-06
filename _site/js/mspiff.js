@@ -1,5 +1,13 @@
 var Mspiff = (function () {
 
+  function getSidFrom(node) {
+    return parseInt( node.attr('id').substring( 'screening-'.length ))
+  }
+
+  function nodeForSid(sid) {
+    return $(sid);
+  }
+
   function renderDayTimeline(id,json) {
     var data = JSON.parse(json)
     var node = document.createElement( 'div' )
@@ -18,16 +26,11 @@ var Mspiff = (function () {
 
   function setEventHandlers() {
 
-    function getSidFrom(node) {
-      return parseInt( node.attr('id').substring( 'screening-'.length ))
-    }
-
     $('#schedule').
       on( 'click', '.vis-item-content', {},
           function () {
             if ( !$(this).hasClass('control') ) {
               addScreening( getSidFrom( $('.screening',this) ) )
-              $(this).find('.control').css('visibility','visible')
             }
           }
         )
@@ -47,12 +50,10 @@ var Mspiff = (function () {
               $(this).toggleClass( 'unpinned pinned' )
               $(this).find('.fa').toggleClass( 'fa-circle-o fa-circle')
               pinScreening( sid )
-              console.log( "PIN" )
             } else if ( $(this).hasClass( 'pinned' ) ) {
               $(this).attr( 'title', 'Unpin Screening' )
               $(this).toggleClass( 'pinned unpinned' )
               $(this).find('.fa').toggleClass( 'fa-circle-o fa-circle')
-              console.log( "UNPIN" )
               unPinScreening( sid )
             }
             return false;
@@ -91,6 +92,13 @@ var Mspiff = (function () {
     return Cookies.remove('data')
   }
 
+  function showControlsFor(sid) {
+    $(sid).find('.control').css('visibility','visible')
+  }
+
+  function hideControlsFor(sid) {
+    $(sid).find('.control').css('visibility','hidden')
+  }
   function postInit() {
     $('.footer').css( 'visibility','visible' )
   }
@@ -105,6 +113,8 @@ var Mspiff = (function () {
            , getCookie : getCookie
            , setCookie : setCookie
            , removeCookie : removeCookie
+           , showControlsFor : showControlsFor
+           , hideControlsFor : hideControlsFor
            , postInit : postInit
          }
 })()

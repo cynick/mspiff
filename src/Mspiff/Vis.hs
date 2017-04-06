@@ -21,7 +21,6 @@ data VisItem = VisItem
   , endDate :: UTCTime
   , itemContent :: T.Text
   , group :: VenueId
-  , title :: Name
   }
   deriving Show
 
@@ -33,7 +32,6 @@ instance ToJSON VisItem where
       , "end" .= endDate
       , "content" .= itemContent
       , "group" .= group
-      , "title" .= title
       ]
 
 data VisGroup = VisGroup
@@ -92,9 +90,9 @@ buildVisData Catalog{..} = toVisData <$> screeningGroups
             itemId = screeningId s
             startDate = showtimeToUtc s
             endDate = endDateFor s
-            itemContent = LT.toStrict $ renderText (renderScreening s title)
+            itemContent = LT.toStrict $ renderText (renderScreening s t)
             group = fromJust $ DL.lookup (scVenueId s) groupIdMap
-            title = filmTitle (findFor films filmId (scFilmId s))
+            t = filmTitle (findFor films filmId (scFilmId s))
         endDateFor s =
           addUTCTime (fromIntegral (duration s)) (showtimeToUtc s)
         groupIdMap = zip vids [0..]

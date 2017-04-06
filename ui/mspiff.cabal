@@ -42,6 +42,7 @@ library
                    , QuickCheck
                    , conduit
                    , stm-conduit
+                   , stm
     exposed-modules:   Mspiff.Model
                      , Mspiff.Loader
                      , Mspiff.Scheduler
@@ -81,6 +82,7 @@ executable mspiff
                    , uri-encode
                    , data-default
                    , conduit
+                   , stm
                    , stm-conduit
                    , ghcjs-jquery
                    , ghcjs-base

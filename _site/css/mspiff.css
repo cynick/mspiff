@@ -57,7 +57,7 @@ noscript {
 }
 
 .control {
-
+    visibility: hidden;
 }
 
 .control-left {
@@ -68,11 +68,13 @@ noscript {
 .ruleout-screening {
     float: left;
     width: 25%;
+    border:1px solid black;
 }
 
 .pin-screening {
     float: left;
     width: 25%;
+    border:1px solid black;
 }
 
 .control-right {

@@ -42,6 +42,7 @@ library
                    , QuickCheck
                    , conduit
                    , stm-conduit
+                   , stm
     exposed-modules:   Mspiff.Model
                      , Mspiff.Loader
                      , Mspiff.Scheduler
@@ -104,3 +105,4 @@ test-suite test
                    , vector
                    , conduit
                    , stm-conduit
+                   , stm

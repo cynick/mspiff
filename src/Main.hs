@@ -5,12 +5,12 @@ import Prelude hiding (log)
 import Control.Monad
 import Control.Arrow
 import Control.Concurrent
+import Control.Concurrent.STM
 import GHCJS.Foreign
 import GHCJS.Types
 import GHCJS.Marshal(fromJSVal)
 import GHCJS.Foreign.Callback
 import GHCJS.Prim
-
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
@@ -18,7 +18,9 @@ import qualified Data.Text.Lazy.IO as LT
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString as BS
 import qualified Data.List as DL
+import Data.Conduit.TMChan
 import Data.Aeson
+import Data.Conduit
 import Data.Maybe
 import Data.Text.Lazy.Encoding
 import Data.FileEmbed
@@ -42,8 +44,8 @@ catalogJson = $(embedFile "data/catalog")
 foreign import javascript unsafe "Mspiff.renderDayTimeline($1,$2)"
  renderDayTimeline :: Int -> JSString -> IO ()
 
-foreign import javascript unsafe "Mspiff.setEventHandler()"
- setEventHandler :: IO ()
+foreign import javascript unsafe "Mspiff.setEventHandlers()"
+ setEventHandlers :: IO ()
 
 foreign import javascript unsafe "Mspiff.setCookie($1)"
  setCookie :: JSString -> IO ()
@@ -54,8 +56,23 @@ foreign import javascript unsafe "Mspiff.getCookie()"
 foreign import javascript unsafe "console.log($1)"
  log_ :: JSVal -> IO ()
 
-foreign import javascript unsafe "eventCallback = $1"
- setEventCallback :: Callback (JSVal -> IO ()) -> IO ()
+foreign import javascript unsafe "addScreening = $1"
+ setAddScreening :: Callback (JSVal -> IO ()) -> IO ()
+
+foreign import javascript unsafe "ruleOutScreening = $1"
+ setRuleOutScreening :: Callback (JSVal -> IO ()) -> IO ()
+
+foreign import javascript unsafe "pinScreening = $1"
+ setPinScreening :: Callback (JSVal -> IO ()) -> IO ()
+
+foreign import javascript unsafe "unPinScreening = $1"
+ setUnPinScreening :: Callback (JSVal -> IO ()) -> IO ()
+
+foreign import javascript unsafe "removeFilm = $1"
+ setRemoveFilm :: Callback (JSVal -> IO ()) -> IO ()
+
+foreign import javascript unsafe "clearState = $1"
+ setClearState :: Callback (JSVal -> IO ()) -> IO ()
 
 turnOffSpinner :: IO ()
 turnOffSpinner = do
@@ -68,31 +85,59 @@ log x = log_ $ toJSString ("HS: " <> x)
 idFor :: Screening -> JSString
 idFor s = pack $ "#screening-" <> show (screeningId s)
 
-updateSchedule ::
-  ScreeningMap ->
-  Catalog ->
-  MVar ScheduleState ->
-  JSVal ->
-  IO ()
-updateSchedule smap Catalog{..} _ sid =
-  forM_ (M.lookup (fromJSInt sid) smap) $ \s -> do
-    update s
-    tid <- myThreadId
-    log $ "Clicked" <> show s <> " from thread " <> show tid
-
+redraw :: Catalog -> ScheduleState -> ScheduleState -> IO ()
+redraw _ old = mapM_ (mapM_ go . unGroup) . M.elems
   where
-    update s = do
-      setColor "green" s
-      mapM_ (setColor "orange") (others s)
-      mapM_ (setColor "red") (overlapping s)
+    go :: MarkedScreening -> IO ()
+    go MarkedScreening{..} = do
+      case status of
+        Scheduled -> do
+          setColor "green" screening
+          mapM_ (setColor "orange") (others screening)
+          mapM_ (setColor "darkgrey") (overlapping screening)
+
     nodeFor s = select (idFor s) >>= parent >>= parent
     setColor c s = nodeFor s >>= setCss "background-color" c
+
+findScreening k = M.lookup (fromJSInt k)
+
+handleScreeningCmd ::
+  (Screening -> Command) ->
+  ScreeningMap ->
+  Catalog ->
+  TBMChan Command ->
+  JSVal ->
+  IO ()
+handleScreeningCmd cmd smap Catalog{..} chan sid = do
+  forM_ ms $ \s -> do
+    let cmd' = cmd s
+    log $ "CMD: " ++ show cmd'
+    atomically (writeTBMChan chan cmd')
+  where
+    ms = findScreening sid smap
+
+handleCmd ::
+  Command ->
+  ScreeningMap ->
+  Catalog ->
+  TBMChan Command ->
+  JSVal ->
+  IO ()
+handleCmd cmd smap Catalog{..} chan sid =
+  forM_ ms $ \s -> atomically (writeTBMChan chan cmd)
+  where
+    ms = findScreening sid smap
 
 hsToJs :: ToJSON a => a -> JSString
 hsToJs = pack . T.unpack . LT.toStrict . decodeUtf8 . encode
 
 jsToHs :: FromJSON a => JSString -> Maybe a
 jsToHs = decode' . encodeUtf8 . LT.fromStrict . T.pack . unpack
+
+setCallback screeningMap catalog chan handler setter =
+  setter =<< syncCallback1 ContinueAsync callback
+  where
+    callback = handler screeningMap catalog chan
 
 main :: IO ()
 main = do
@@ -103,16 +148,33 @@ main = do
 
     timelineData = DL.zip [0.. ] (hsToJs <$> visData)
     screeningMap = M.fromList $ (screeningId &&& id) <$> ss
-  cookie <- jsToHs <$> getCookie
-  log $ "C1: " <> show cookie
-  mvar <- newMVar (maybe M.empty (fromPersistState screeningMap) cookie)
+  persistState <- jsToHs <$> getCookie
+  let
+    state = maybe M.empty (fromPersistState screeningMap) persistState
+  log $ "C1: " <> show persistState
+  chan <- newTBMChanIO 5
 
   mapM_ (uncurry renderDayTimeline) (DL.take 3 timelineData)
   turnOffSpinner
+
   let
-    callback = updateSchedule screeningMap catalog mvar
-  setEventCallback =<< syncCallback1 ContinueAsync callback
-  setEventHandler
+    handlers =
+      [ handleScreeningCmd Add
+      , handleScreeningCmd RuleOut
+      , handleScreeningCmd Pin
+      , handleScreeningCmd UnPin
+      , handleScreeningCmd RemoveFilm
+      , handleCmd Clear
+      ]
+    setHandlers =
+      [ setAddScreening
+      , setRuleOutScreening
+      , setPinScreening
+      , setUnPinScreening
+      , setRemoveFilm
+      , setClearState
+      ]
 
-
+  zipWithM_ (setCallback screeningMap catalog chan) handlers setHandlers
+  setEventHandlers
 

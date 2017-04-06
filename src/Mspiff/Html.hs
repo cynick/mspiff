@@ -27,15 +27,25 @@ renderScreening s name =
        , id_ ("screening-" <> toText (screeningId s))
        ] $ do
     div_ [class_ "film-title"] (toHtml name)
-    control
+    div_ [class_ "control remove-film"] (a_ [href_ "#"] $ icon "fa-times")
+    div_ [] $ do
+      controlLeft
+      remove
+      pin
+      controlRight
 
 icon :: T.Text -> Html ()
 icon c = i_ [class_ ("fa icon-resize-small" <> " " <> c)] ""
 
-control :: Html ()
-control =
-  div_ [class_ "control icon-bar"] $ do
-    a_ [class_ "active", href_ "#"] $ icon "fa fa-plus"
-    a_ [href_ "#"] $ icon "fa-minus"
-    a_ [href_ "#"] $ icon "fa-circle-o"
-    a_ [href_ "#"] $ icon "fa-times"
+controlLeft :: Html ()
+controlLeft = div_ [class_ "control-left"] (return ())
+
+controlRight :: Html ()
+controlRight = div_ [class_ "control-left"] (return ())
+
+remove :: Html ()
+remove = div_ [class_ "control ruleout-screening"] (a_ [href_ "#"] $ icon "fa-minus")
+
+pin :: Html ()
+pin = div_ [class_ "control pin-screening unpinned"] (a_ [href_ "#"] $ icon "fa-circle-o")
+

@@ -240,11 +240,11 @@ instance FromJSON PersistState where
     let
       fromObject (Object o') =
         (,,) <$> o' .: "i" <*> o' .: "s" <*> o' .: "p"
-      fromObject _ = error $ "invalid persist state json"
+      fromObject _ = error "invalid persist state json"
     Array ps <- o .: "ps"
 
     PersistState <$> mapM fromObject (V.toList ps)
-  parseJSON _ = error $ "invalid persist state json"
+  parseJSON _ = error "expected persist state json to be object"
 
 toPersistState :: ScheduleState -> PersistState
 toPersistState ss = PersistState $ concat ps
@@ -264,3 +264,13 @@ fromPersistState smap (PersistState ps) =
       (scFilmId . screening $ NE.head ms, ScreeningGroup (NE.toList ms))
     fromPs (sid, status, pinned) =
       MarkedScreening status pinned (fromJust (M.lookup sid smap))
+
+
+data Command
+  = Add Screening
+  | RuleOut Screening
+  | Pin Screening
+  | UnPin Screening
+  | RemoveFilm Screening
+  | Clear
+  deriving Show

@@ -9,7 +9,12 @@ import Data.Time
 import Data.Time.Clock.POSIX
 import qualified Data.List as DL
 import Data.Maybe
-
+import Data.Conduit.TMChan
+import Control.Concurrent
+import Control.Monad
+import Control.Monad.State
+import Data.Conduit as C
+import qualified Data.Conduit.Lift as C
 import Mspiff.Model
 import Mspiff.Loader
 
@@ -181,3 +186,18 @@ impossibleTriples w fs = DL.foldr filt [] combos
     combos = [[a,b] | a <- fs, b <- fs, c <- fs, filmId a < filmId b && filmId b < filmId c]
     filt a b = if DL.null (viewableSchedulesFor' w a) then a:b else b
 
+
+{-               
+updateState ::
+  (Monad m, MonadIO m) =>
+  C.ConduitM Command () m ()
+updateState redraw = C.evalStateC M.empty $ C.awaitForever $ \cmd -> do
+  st <- get
+  let st' = runCmd cmd
+  redraw (st, st')
+  put st'
+
+setupLoop = do
+  chan <- newTBMChanIO 10
+  void $ forkIO $ runResourceT $ sourceTBMChan chan $$ updateState
+-}

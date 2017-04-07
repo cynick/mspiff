@@ -231,5 +231,6 @@ data Command
   | Pin Screening
   | UnPin Screening
   | RemoveFilm Screening
+  | ShowBlurb Screening
   | Clear
   deriving Show

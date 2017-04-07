@@ -71,5 +71,8 @@ let hist v = DL.foldl' (\(a,b) v' -> if v' == v then (a+1,b) else (a,b+1)) (0,0)
 
 let toUtc = posixSecondsToUTCTime . fromIntegral . showtime
 
+let isDiv = isTagOpenName "div"
+let hasClass c t = isDiv t && fromAttrib "class" t == c
 
 
+t <- parseTags <$> T.readFile "t"

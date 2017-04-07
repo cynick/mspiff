@@ -32,6 +32,7 @@ renderScreening s name =
       controlLeft
       remove
       pin
+      info
       controlRight
 
 icon :: T.Text -> Html ()
@@ -39,9 +40,6 @@ icon c = i_ [class_ ("fa icon-resize-small" <> " " <> c)] ""
 
 controlLeft :: Html ()
 controlLeft = div_ [class_ "control-left"] (return ())
-
-controlRight :: Html ()
-controlRight = div_ [class_ "control-left"] (return ())
 
 remove :: Html ()
 remove = div_ attrs (a_ [href_ "#"] $ icon "fa-minus")
@@ -58,4 +56,10 @@ pin = div_ attrs (a_ [href_ "#"] $ icon "fa-circle-o")
       [ class_ "control pin-screening unpinned"
       , at "title" "Pin Screening"
       ]
+
+controlRight :: Html ()
+controlRight = div_ [class_ "control-right"] (return ())
+
+info :: Html ()
+info = div_ [class_ "screening-info"] (a_ [href_ "#"] $ icon "fa-info")
 

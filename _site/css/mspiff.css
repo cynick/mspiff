@@ -98,6 +98,10 @@ noscript {
     color: black;
 }
 
+#blurb-modal {
+    visibility: hidden;
+}
+
 .footer {
     visibility: hidden;
     padding-top: 40px;

@@ -110,6 +110,15 @@ processLd = go
     isLdJson t =
       isTagOpenName "script" t && fromAttrib "type" t == "application/ld+json"
 
+isDiv :: Tag T.Text -> Bool
+isDiv = isTagOpenName "div"
+
+hasClass :: T.Text -> Tag T.Text -> Bool
+hasClass = hasAttrib "class"
+
+hasAttrib :: T.Text -> T.Text -> Tag T.Text -> Bool
+hasAttrib n v t = fromAttrib n t == v
+
 processTags :: [Tag T.Text] -> [ScrapeScreening]
 processTags tags = foldr combine [] (fromMaybe [] screenings)
   where
@@ -124,8 +133,6 @@ processTags tags = foldr combine [] (fromMaybe [] screenings)
           | otherwise = go acc (DL.drop 1 list)
         go acc _ = acc
         parseDuration = (*60) . read . T.unpack . fromAttrib "duration"
-        isDiv = isTagOpenName "div"
-        hasClass c t = isDiv t && fromAttrib "class" t == c
         isSE = hasClass "ScheduledEvent"
         isItem = hasClass "Item"
         isName = hasClass "Name"
@@ -140,3 +147,26 @@ hit url = do
   request <- parseRequest (T.unpack url)
   response <- httpLbs request manager
   return $ LT.toStrict (decodeUtf8 (responseBody response))
+
+data Blurb = Blurb
+ { blurbImage :: T.Text
+ , blurbText :: T.Text
+ }
+ deriving Show
+
+fetchBlurbFor :: Film -> IO (Maybe Blurb)
+fetchBlurbFor f = buildBlurb . parseTags <$> hit (filmUrl f)
+
+buildBlurb :: [Tag T.Text] -> Maybe Blurb
+buildBlurb tags = build
+  where
+    build =  liftM2 Blurb blurbImage blurbText
+    blurbImage = fromAttrib "alt" <$> tag
+      where
+        tag = DL.find filt tags
+        filt t =
+          isTagOpen t && isTagOpenName "img" t &&  T.take 6 (fromAttrib "alt" t) == "mspiff"
+    blurbText = fromAttrib "content" <$> tag
+      where
+        tag = listToMaybe $ DL.filter filt tags
+        filt t = isTagOpenName "meta" t && hasAttrib "property" "og:description" t

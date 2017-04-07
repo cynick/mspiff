@@ -10,9 +10,6 @@ import Mspiff.Scheduler
 
 import Test.TestUtil
 
-w :: WholeSchedule
-w = Schedule screenings_
-
 s1 :: Screening
 s1 = fs 11
 
@@ -37,7 +34,7 @@ tests' :: [Test]
 tests' =
     [ "test0" ~: at
     , "testAdd0"  ~: do
-       let (ScreeningGroup sg:_) = M.elems (addScreening s0 M.empty)
+       let (sg:_) = M.elems (addScreening s0 M.empty)
        (screeningId . screening) <$> sg @?= [248]
        status <$> sg @?= [Scheduled]
 
@@ -51,83 +48,83 @@ tests' =
        let s = removeFilm s0 (addScreening s1 (addScreening s0 M.empty))
        DL.length s @?= 1
     , "testRuleOut0"  ~: do
-       let (ScreeningGroup sg:_) = M.elems (ruleOutScreening s0 M.empty)
+       let (sg:_) = M.elems (ruleOutScreening s0 M.empty)
        (screeningId . screening) <$> sg @?= [248]
        status <$> sg @?= [RuledOut]
     , "testAddRuleOut"  ~: do
-       let (ScreeningGroup sg:_) = M.elems (ruleOutScreening s0 (addScreening s0 M.empty))
+       let (sg:_) = M.elems (ruleOutScreening s0 (addScreening s0 M.empty))
        (screeningId . screening) <$> sg @?= [248]
        status <$> sg @?= [RuledOut]
     , "testAdd0Twice"  ~: do
-       let (ScreeningGroup sg:_) = M.elems (addScreening s0 (addScreening s0 M.empty))
+       let (sg:_) = M.elems (addScreening s0 (addScreening s0 M.empty))
        (screeningId . screening) <$> sg @?= [248]
        status <$> sg @?= [Scheduled]
     , "testAdd<"  ~: do
-       let (ScreeningGroup sg:_) = M.elems (addScreening s1 M.empty)
+       let (sg:_) = M.elems (addScreening s1 M.empty)
        (screeningId . screening) <$> sg @?= [11,38]
        status <$> sg @?= [Scheduled, OtherScheduled]
     , "testAdd>"  ~: do
-       let (ScreeningGroup sg:_) = M.elems (addScreening s1' M.empty)
+       let (sg:_) = M.elems (addScreening s1' M.empty)
        DL.length sg @?= 2
        status <$> sg @?= [OtherScheduled, Scheduled]
        (screeningId . screening) <$> sg @?= [11,38]
     , "testAdd<<"  ~: do
-       let (ScreeningGroup sg:_) = M.elems (addScreening s1 (addScreening s1 M.empty))
+       let (sg:_) = M.elems (addScreening s1 (addScreening s1 M.empty))
        status <$> sg @?= [Scheduled, OtherScheduled]
        (screeningId . screening) <$> sg @?= [11,38]
     , "testAdd>>"  ~: do
-       let (ScreeningGroup sg:_) = M.elems (addScreening s1' M.empty)
+       let (sg:_) = M.elems (addScreening s1' M.empty)
        status <$> sg @?= [OtherScheduled, Scheduled]
        (screeningId . screening) <$> sg @?= [11,38]
     , "testAdd<>"  ~: do
-       let (ScreeningGroup sg:_) = M.elems (addScreening s1' M.empty)
+       let (sg:_) = M.elems (addScreening s1' M.empty)
        status <$> sg @?= [OtherScheduled, Scheduled]
        (screeningId . screening) <$> sg @?= [11,38]
     , "testAdd><"  ~: do
-       let (ScreeningGroup sg:_) = M.elems (addScreening s1 (addScreening s1' M.empty))
+       let (sg:_) = M.elems (addScreening s1 (addScreening s1' M.empty))
        status <$> sg @?= [Scheduled, OtherScheduled]
        (screeningId . screening) <$> sg @?= [11,38]
     , "testAdd><"  ~: do
-       let (ScreeningGroup sg1:ScreeningGroup sg2:_) = M.elems (addScreening s1 (addScreening s0 M.empty))
+       let (sg1:sg2:_) = M.elems (addScreening s1 (addScreening s0 M.empty))
        status <$> sg1 @?= [Scheduled]
        (screeningId . screening) <$> sg1 @?= [248]
        status <$> sg2 @?= [Scheduled, OtherScheduled]
        (screeningId . screening) <$> sg2 @?= [11,38]
     , "testRuleOut<"  ~: do
-       let (ScreeningGroup sg1:_) = M.elems (ruleOutScreening s1 (addScreening s1 M.empty))
+       let (sg1:_) = M.elems (ruleOutScreening s1 (addScreening s1 M.empty))
        status <$> sg1 @?= [RuledOut, Scheduled]
        pinned <$> sg1 @?= [Unpinned, Unpinned]
        (screeningId . screening) <$> sg1 @?= [11,38]
     , "testRuleOut>"  ~: do
-       let (ScreeningGroup sg1:_) = M.elems (ruleOutScreening s1' (addScreening s1' M.empty))
+       let (sg1:_) = M.elems (ruleOutScreening s1' (addScreening s1' M.empty))
        status <$> sg1 @?= [Scheduled, RuledOut]
        pinned <$> sg1 @?= [Unpinned, Unpinned]
        (screeningId . screening) <$> sg1 @?= [11,38]
     , "testRuleOutBoth"  ~: do
-       let (ScreeningGroup sg1:_) = M.elems (ruleOutScreening s1 (ruleOutScreening s1' (addScreening s1 M.empty)))
+       let (sg1:_) = M.elems (ruleOutScreening s1 (ruleOutScreening s1' (addScreening s1 M.empty)))
        status <$> sg1 @?= [RuledOut, RuledOut]
        pinned <$> sg1 @?= [Unpinned, Unpinned]
        (screeningId . screening) <$> sg1 @?= [11,38]
     , "testPin<"  ~: do
-       let (ScreeningGroup sg1:_) = M.elems (pinScreening s1 (addScreening s1 M.empty))
+       let (sg1:_) = M.elems (pinScreening s1 (addScreening s1 M.empty))
        status <$> sg1 @?= [Scheduled, RuledOut]
        pinned <$> sg1 @?= [Pinned, Unpinned]
        (screeningId . screening) <$> sg1 @?= [11,38]
     , "testPin>"  ~: do
-       let (ScreeningGroup sg1:_) = M.elems (pinScreening s1' (addScreening s1' M.empty))
+       let (sg1:_) = M.elems (pinScreening s1' (addScreening s1' M.empty))
        status <$> sg1 @?= [RuledOut, Scheduled]
        pinned <$> sg1 @?= [Unpinned, Pinned]
        (screeningId . screening) <$> sg1 @?= [11,38]
     , "testScheduleOne" ~: do
        let
          st = addScreening s0 M.empty
-         (st',Just (Schedule [a])) = viewableScheduleFor w st
+         (st',Just (Schedule [a]),_) = viewableScheduleFor catalog st
        st' @?= st
        [a] @?= [s0]
     , "testScheduleTwo" ~: do
        let
          st = addScreening s1 (addScreening s0 M.empty)
-         (st',Just (Schedule [a,b])) = viewableScheduleFor w st
+         (st',Just (Schedule [a,b]),_) = viewableScheduleFor catalog st
        st' @?= st
        print b
        [b,a] @?= [s1,s0]
@@ -135,7 +132,7 @@ tests' =
        let
          sids = [397,398,399,400]
          st = foldr (\sid st_ -> addScreening (fs sid) st_) M.empty sids
-         (st',Just (Schedule s)) = viewableScheduleFor w st
+         (st',Just (Schedule s),_) = viewableScheduleFor catalog st
        st' @?= st
        print (screeningId <$> s)
     , "testScheduleFourOverlappingWithOneRuledOut" ~: do
@@ -143,9 +140,9 @@ tests' =
          sids = [397,398,399,400]
          st = foldr (\sid st_ -> addScreening (fs sid) st_) M.empty sids
          st' = ruleOutScreening (fs 397) st
-         (st'',Just (Schedule s)) = viewableScheduleFor w st'
+         (st'',Just (Schedule s),_) = viewableScheduleFor catalog st'
        st'' @?= st'
-       print (screeningId <$> s)
+       print (s)
 
     ]
 

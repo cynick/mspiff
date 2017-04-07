@@ -99,8 +99,21 @@ var Mspiff = (function () {
   function hideControlsFor(sid) {
     $(sid).find('.control').css('visibility','hidden')
   }
+
+  function showBlurbModal(img,text) {
+    if ( img == "" || text == "" ) {
+      console.log( "NO MODAL DATA" )
+      return
+    }
+    $("#blurb-modal").text( text )
+    $("#blurb-modal").modal('show')
+  }
+
   function postInit() {
     $('.footer').css( 'visibility','visible' )
+    $('.screening-info').hover( function () {
+      showBlurb(getSidFrom($(this).parents('.screening')))
+    })
   }
 
   function main () {
@@ -115,6 +128,7 @@ var Mspiff = (function () {
            , removeCookie : removeCookie
            , showControlsFor : showControlsFor
            , hideControlsFor : hideControlsFor
+           , showBlurbModal : showBlurbModal
            , postInit : postInit
          }
 })()

@@ -18,6 +18,7 @@ import qualified Data.Text.Lazy.IO as LT
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString as BS
 import qualified Data.List as DL
+import Data.JSString.Text
 import Data.Conduit.TMChan
 import Data.Aeson
 import Data.Conduit
@@ -38,6 +39,7 @@ import Mspiff.Loader
 import Mspiff.Scheduler
 import Mspiff.Html
 import Mspiff.Vis
+import Mspiff.Scrape
 
 catalogJson :: BS.ByteString
 catalogJson = $(embedFile "data/catalog")
@@ -53,6 +55,9 @@ foreign import javascript unsafe "Mspiff.setCookie($1)"
 
 foreign import javascript unsafe "Mspiff.getCookie()"
  getCookie :: IO JSString
+
+foreign import javascript unsafe "Mspiff.showBlurbModal($1,$2)"
+ showBlurbModal :: JSString -> JSString -> IO ()
 
 foreign import javascript unsafe "Mspiff.postInit()"
  postInit :: IO ()
@@ -74,6 +79,9 @@ foreign import javascript unsafe "unPinScreening = $1"
 
 foreign import javascript unsafe "removeFilm = $1"
  setRemoveFilm :: Callback (JSVal -> IO ()) -> IO ()
+
+foreign import javascript unsafe "showBlurb = $1"
+ setShowBlurb :: Callback (JSVal -> IO ()) -> IO ()
 
 foreign import javascript unsafe "clearState = $1"
  setClearState :: Callback (JSVal -> IO ()) -> IO ()
@@ -123,6 +131,17 @@ update _ old new = do
 
 findScreening k = M.lookup (fromJSInt k)
 
+showBlurbFor :: Film -> IO ()
+showBlurbFor film = do
+  log "FETCHING BLURB"
+  blurb <- fetchBlurbFor film
+  log "FETCHED BLURB"
+  maybe (log "NOT SHOWING BLURB") showBlurb blurb
+  where
+    showBlurb Blurb{..} = do
+      log "SHOWING BLURB"
+      showBlurbModal (textToJSString blurbImage) (textToJSString blurbText)
+
 handleScreeningCmd ::
   (Screening -> Command) ->
   Catalog ->
@@ -133,9 +152,14 @@ handleScreeningCmd cmd cat@Catalog{..} chan sid = do
   forM_ ms $ \s -> do
     let cmd' = cmd s
     log $ "CMD: " ++ show cmd'
-    atomically (writeTBMChan chan cmd')
+    handle cmd'
   where
     ms = findScreening sid screeningMap
+    sendCmd = atomically . writeTBMChan chan
+    handle (ShowBlurb s) = maybe (log "ERRORA") showBlurbFor (filmOf s)
+    handle cmd = sendCmd cmd
+    filmOf s = M.lookup (scFilmId s) filmMap
+
 
 handleCmd ::
   Command ->
@@ -180,7 +204,9 @@ main = do
       , handleScreeningCmd Pin
       , handleScreeningCmd UnPin
       , handleScreeningCmd RemoveFilm
+      , handleScreeningCmd ShowBlurb
       , handleCmd Clear
+
       ]
     setHandlers =
       [ setAddScreening
@@ -188,6 +214,7 @@ main = do
       , setPinScreening
       , setUnPinScreening
       , setRemoveFilm
+      , setShowBlurb
       , setClearState
       ]
 

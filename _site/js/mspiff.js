@@ -73,6 +73,10 @@ var Mspiff = (function () {
           function () {
             $('.vis-item-overflow').css('background-color','rgb(213,221,246)')
             $('.screening').find('.control').css('visibility','hidden')
+            $('.pin-screening > a > .fa-circle').each( function () {
+              $(this).removeClass('fa-circle')
+              $(this).addClass('fa-circle-o')
+            })
             removeCookie()
             clearState()
             return false;
@@ -105,8 +109,8 @@ var Mspiff = (function () {
       console.log( "NO MODAL DATA" )
       return
     }
-    $("#blurb-modal").text( text )
-    $("#blurb-modal").modal('show')
+    $(".blurb-modal").text( text )
+    $(".blurb-modal").modal('show')
   }
 
   function postInit() {

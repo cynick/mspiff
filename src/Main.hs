@@ -94,7 +94,7 @@ foreign import javascript unsafe "Mspiff.hideControlsFor($1)"
 
 turnOffSpinner :: IO ()
 turnOffSpinner = do
-  node <- select "#loading"
+  node <- select ".loading"
   void $ setCss "visibility" "hidden" node
 
 log :: String -> IO ()
@@ -106,6 +106,7 @@ idFor s = pack $ "#screening-" <> show (screeningId s)
 update :: Catalog -> ScheduleState -> ScheduleState -> IO ()
 update _ old new = do
   log $ "REDRAW: " ++ show new
+
   mapM_ updateOld oldMS
   mapM_ updateNew newMS
   setCookie (hsToJs (toPersistState new))

@@ -1,5 +1,5 @@
 
-#loading {
+.loading {
     visibility: visible;
 }
 
@@ -98,7 +98,7 @@ noscript {
     color: black;
 }
 
-#blurb-modal {
+.blurb-modal {
     visibility: hidden;
 }
 

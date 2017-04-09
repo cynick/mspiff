@@ -24,6 +24,11 @@ var Mspiff = (function () {
     schedule.appendChild(node)
   }
 
+  function resetPin() {
+    $(this).removeClass('fa-circle')
+    $(this).addClass('fa-circle-o')
+  }
+
   function setEventHandlers() {
 
     $('#schedule').
@@ -73,10 +78,7 @@ var Mspiff = (function () {
           function () {
             $('.vis-item-overflow').css('background-color','rgb(213,221,246)')
             $('.screening').find('.control').css('visibility','hidden')
-            $('.pin-screening > a > .fa-circle').each( function () {
-              $(this).removeClass('fa-circle')
-              $(this).addClass('fa-circle-o')
-            })
+            $('.pin-screening > a > .fa-circle').each( resetPin )
             removeCookie()
             clearState()
             return false;
@@ -102,6 +104,7 @@ var Mspiff = (function () {
 
   function hideControlsFor(sid) {
     $(sid).find('.control').css('visibility','hidden')
+    $(sid).find('.pin-screening > a > .fa-circle').each( resetPin )
   }
 
   function showBlurbModal(img,text) {

@@ -127,6 +127,7 @@ update _ old new = do
        when ( ms `notElem` newMS ) $ do
         setColor screening "rgb(212,221,246)"
         hideControlsFor (idFor screening)
+        resetPin (idFor screeing)
     nodeFor s = select (idFor s) >>= parent >>= parent
     setColor s c = nodeFor s >>= setCss "background-color" c >> return ()
 
@@ -134,10 +135,8 @@ findScreening k = M.lookup (fromJSInt k)
 
 showBlurbFor :: Film -> IO ()
 showBlurbFor film = do
-  log "FETCHING BLURB"
   blurb <- fetchBlurbFor film
-  log "FETCHED BLURB"
-  maybe (log "NOT SHOWING BLURB") showBlurb blurb
+  maybe (return ()) showBlurb blurb
   where
     showBlurb Blurb{..} = do
       log "SHOWING BLURB"
@@ -157,10 +156,9 @@ handleScreeningCmd cmd cat@Catalog{..} chan sid = do
   where
     ms = findScreening sid screeningMap
     sendCmd = atomically . writeTBMChan chan
-    handle (ShowBlurb s) = maybe (log "ERRORA") showBlurbFor (filmOf s)
-    handle cmd = sendCmd cmd
+    handle (ShowBlurb s) = maybe (return ()) showBlurbFor (filmOf s)
+    handle = redraw cmd >> sendCmd cmd
     filmOf s = M.lookup (scFilmId s) filmMap
-
 
 handleCmd ::
   Command ->
@@ -191,6 +189,7 @@ main = do
 
     timelineData = DL.zip [0.. ] (hsToJs <$> visData)
   persistState <- jsToHs <$> getCookie
+  log $ show (hsToJs persistState)
   let
     state = maybe M.empty (fromPersistState screeningMap) persistState
   chan <- newTBMChanIO 5

@@ -122,7 +122,7 @@ instance FromJSON Screening where
 type ScreeningMap = M.Map ScreeningId Screening
 
 data Pinned = Pinned | Unpinned
-  deriving (Show, Read, Eq, Bounded, Enum)
+  deriving (Show, Read, Eq, Bounded, Enum, Ord)
 
 instance ToJSON Pinned where
   toJSON Pinned = Number 0
@@ -134,7 +134,7 @@ instance FromJSON Pinned where
 
 data ScreeningStatus =
   Unscheduled | Scheduled | Impossible | RuledOut | OtherScheduled
-  deriving (Show, Read, Eq, Bounded, Enum)
+  deriving (Show, Read, Eq, Bounded, Enum, Ord)
 
 instance ToJSON ScreeningStatus where
   toJSON Unscheduled = Number 0

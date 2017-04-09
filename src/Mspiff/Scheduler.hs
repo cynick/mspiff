@@ -188,10 +188,10 @@ impossibleTriples fs = DL.foldr filt [] combos
     combos = [[a,b] | a <- fs, b <- fs, c <- fs, filmId a < filmId b && filmId b < filmId c]
     filt a b = if DL.null (viewableSchedulesFor' a) then a:b else b
 
-runCmd :: Catalog -> ScheduleState -> Command -> ScheduleState
-runCmd cat@Catalog{..} st = schedule . run
+updateState :: ScheduleState -> Command -> ScheduleState
+updateState st = go
   where
-    run cmd =
+    go cmd =
       case cmd of
         Add s -> addScreening s st
         RuleOut s -> ruleOutScreening s st
@@ -199,22 +199,36 @@ runCmd cat@Catalog{..} st = schedule . run
         UnPin s -> unPinScreening s st
         RemoveFilm s -> removeFilm s st
         Clear -> M.empty
-    schedule st =
-      maybe st' (foldr addScreening st' . scheduleScreenings) vs
-      where
-        (st', vs, missed) = viewableScheduleFor cat st
+        _ -> st
 
-updateState ::
+data LoopState = LoopState
+  { st :: ScheduleState
+  , tid :: Maybe ThreadId
+  }
+
+runScheduler :: Catalog -> ScheduleState -> IO ()
+runScheduler cat st = do
+  maybe st' (foldr addScreening st' . scheduleScreenings) vs
+    where
+     (st', vs, missed) = viewableScheduleFor cat st
+
+processCommand ::
   (Monad m, MonadIO m) =>
   Catalog ->
   (ScheduleState -> ScheduleState -> IO ()) ->
-  ScheduleState ->
+  LoopState ->
   C.ConduitM Command Void m ()
-updateState catalog update orig = C.evalStateC orig $ C.awaitForever $ \cmd -> do
-  st <- get
-  let st' = runCmd catalog st cmd
-  liftIO $ update st st'
-  put st'
+processCommand cat redraw orig = C.evalStateC orig $ C.awaitForever $ \cmd -> do
+  LoopState{..} <- get
+  let st' = updateState st cmd
+  liftIO (redraw st st')
+  tid <- do
+    if (st /= st')
+      then do
+        maybe tid (\t -> killThread t >> return Nothing) tid
+        forkIO (runScheduler cat st')
+
+  put (LoopState st' (Just tid))
 
 startSchedulerLoop ::
   TBMChan Command ->
@@ -222,7 +236,7 @@ startSchedulerLoop ::
   (ScheduleState -> ScheduleState -> IO ()) ->
   ScheduleState ->
   IO ThreadId
-startSchedulerLoop chan catalog update orig =
-  forkIO $ sourceTBMChan chan $$ updateState catalog update orig
+startSchedulerLoop chan catalog redraw orig =
+  forkIO $ sourceTBMChan chan $$ processCommand catalog redraw orig
 
 

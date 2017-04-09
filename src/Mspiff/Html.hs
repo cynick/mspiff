@@ -32,7 +32,6 @@ renderScreening s name =
       controlLeft
       remove
       pin
-      info
       controlRight
 
 icon :: T.Text -> Html ()

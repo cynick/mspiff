@@ -204,13 +204,21 @@ updateState st = go
 data LoopState = LoopState
   { st :: ScheduleState
   , tid :: Maybe ThreadId
+  , mvar :: MVar ScheduleState
   }
 
-runScheduler :: Catalog -> ScheduleState -> IO ()
-runScheduler cat st = do
-  maybe st' (foldr addScreening st' . scheduleScreenings) vs
-    where
-     (st', vs, missed) = viewableScheduleFor cat st
+runScheduler ::
+  Catalog ->
+  ScheduleState ->
+  MVar ScheduleState ->
+  (ScheduleState -> ScheduleState -> IO ()) ->
+  IO ()
+runScheduler cat st mvar redraw = do
+  let
+    (st', vs, missed) = viewableScheduleFor cat st
+    st'' = maybe st' (foldr addScreening st' . scheduleScreenings) vs
+--  redraw st st''
+  putMVar mvar st''
 
 processCommand ::
   (Monad m, MonadIO m) =>
@@ -221,14 +229,16 @@ processCommand ::
 processCommand cat redraw orig = C.evalStateC orig $ C.awaitForever $ \cmd -> do
   LoopState{..} <- get
   let st' = updateState st cmd
-  liftIO (redraw st st')
-  tid <- do
-    if (st /= st')
-      then do
-        maybe tid (\t -> killThread t >> return Nothing) tid
-        forkIO (runScheduler cat st')
-
-  put (LoopState st' (Just tid))
+  st'' <- liftIO $ do
+    redraw st st'
+    ret <- tryTakeMVar mvar
+    when (st /= st') $ maybe (return ()) killThread tid
+    return ret
+  forM_ st'' $ liftIO . redraw st'
+  tid' <- liftIO $ do
+    void (tryTakeMVar mvar)
+--    forkIO $ runScheduler cat st' mvar redraw
+  put (LoopState (fromMaybe st' st'') tid mvar)
 
 startSchedulerLoop ::
   TBMChan Command ->
@@ -236,7 +246,9 @@ startSchedulerLoop ::
   (ScheduleState -> ScheduleState -> IO ()) ->
   ScheduleState ->
   IO ThreadId
-startSchedulerLoop chan catalog redraw orig =
-  forkIO $ sourceTBMChan chan $$ processCommand catalog redraw orig
+startSchedulerLoop chan catalog redraw orig = do
+  mvar <- newEmptyMVar
+  let st = LoopState orig Nothing mvar
+  forkIO $ sourceTBMChan chan $$ processCommand catalog redraw st
 
 

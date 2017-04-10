@@ -27,7 +27,7 @@ import Data.Text.Lazy.Encoding
 import Data.FileEmbed
 import Data.Default
 import Data.Monoid
-import Data.JSString
+import Data.JSString hiding (find)
 import JavaScript.JQuery
 import JavaScript.JQuery.Internal
 
@@ -44,8 +44,8 @@ import Mspiff.Scrape
 catalogJson :: BS.ByteString
 catalogJson = $(embedFile "data/catalog")
 
-foreign import javascript unsafe "Mspiff.renderDayTimeline($1,$2)"
- renderDayTimeline :: Int -> JSString -> IO ()
+foreign import javascript unsafe "Mspiff.renderDayTimeline($1,$2,$3)"
+ renderDayTimeline :: Int -> Int -> JSString -> IO ()
 
 foreign import javascript unsafe "Mspiff.setEventHandlers()"
  setEventHandlers :: IO ()
@@ -86,6 +86,9 @@ foreign import javascript unsafe "showBlurb = $1"
 foreign import javascript unsafe "clearState = $1"
  setClearState :: Callback (JSVal -> IO ()) -> IO ()
 
+foreign import javascript unsafe "redraw = $1"
+ setRedraw :: Callback (JSVal -> IO ()) -> IO ()
+
 foreign import javascript unsafe "Mspiff.showControlsFor($1)"
  showControlsFor :: JSString -> IO ()
 
@@ -103,10 +106,8 @@ log x = log_ $ toJSString ("HS: " <> x)
 idFor :: Screening -> JSString
 idFor s = pack $ "#screening-" <> show (screeningId s)
 
-update :: Catalog -> ScheduleState -> ScheduleState -> IO ()
-update _ old new = do
-  log $ "REDRAW: " ++ show new
-
+redraw :: Catalog -> ScheduleState -> ScheduleState -> IO ()
+redraw _ old new = do
   mapM_ updateOld oldMS
   mapM_ updateNew newMS
   setCookie (hsToJs (toPersistState new))
@@ -123,15 +124,19 @@ update _ old new = do
         RuledOut -> "darkgrey"
         Impossible -> "red"
         _ -> "blue"
-    updateOld ms@MarkedScreening{..} = do
+    updateOld ms@MarkedScreening{..} =
        when ( ms `notElem` newMS ) $ do
         setColor screening "rgb(212,221,246)"
         hideControlsFor (idFor screening)
-        resetPin (idFor screeing)
+        resetPin screening
     nodeFor s = select (idFor s) >>= parent >>= parent
     setColor s c = nodeFor s >>= setCss "background-color" c >> return ()
 
-findScreening k = M.lookup (fromJSInt k)
+findScreening = M.lookup . fromJSInt
+
+resetPin :: Screening -> IO ()
+resetPin s =
+  select (idFor s) >>= find ("a > .fa-circle") >>= removeClass("fa-circle") >>= addClass("fa-circle-o") >> return ()
 
 showBlurbFor :: Film -> IO ()
 showBlurbFor film = do
@@ -148,7 +153,7 @@ handleScreeningCmd ::
   TBMChan Command ->
   JSVal ->
   IO ()
-handleScreeningCmd cmd cat@Catalog{..} chan sid = do
+handleScreeningCmd cmd cat@Catalog{..} chan sid =
   forM_ ms $ \s -> do
     let cmd' = cmd s
     log $ "CMD: " ++ show cmd'
@@ -157,7 +162,7 @@ handleScreeningCmd cmd cat@Catalog{..} chan sid = do
     ms = findScreening sid screeningMap
     sendCmd = atomically . writeTBMChan chan
     handle (ShowBlurb s) = maybe (return ()) showBlurbFor (filmOf s)
-    handle = redraw cmd >> sendCmd cmd
+    handle cmd = sendCmd cmd
     filmOf s = M.lookup (scFilmId s) filmMap
 
 handleCmd ::
@@ -181,22 +186,8 @@ setCallback cat@Catalog{..} chan handler setter =
   where
     callback = handler cat chan
 
-main :: IO ()
-main = do
-  let
-    Just catalog@Catalog{..} = loadCatalog (LBS.fromStrict catalogJson)
-    visData = buildVisData catalog
-
-    timelineData = DL.zip [0.. ] (hsToJs <$> visData)
-  persistState <- jsToHs <$> getCookie
-  log $ show (hsToJs persistState)
-  let
-    state = maybe M.empty (fromPersistState screeningMap) persistState
-  chan <- newTBMChanIO 5
-
-  mapM_ (uncurry renderDayTimeline) timelineData
-  turnOffSpinner
-
+setupHandlers :: Catalog -> TBMChan Command -> IO ()
+setupHandlers catalog chan = do
   let
     handlers =
       [ handleScreeningCmd Add
@@ -206,7 +197,7 @@ main = do
       , handleScreeningCmd RemoveFilm
       , handleScreeningCmd ShowBlurb
       , handleCmd Clear
-
+      , handleCmd Redraw
       ]
     setHandlers =
       [ setAddScreening
@@ -216,11 +207,25 @@ main = do
       , setRemoveFilm
       , setShowBlurb
       , setClearState
+      , setRedraw
       ]
-
   zipWithM_ (setCallback catalog chan) handlers setHandlers
-  update catalog state state
-  startSchedulerLoop chan catalog (update catalog) state
+
+main :: IO ()
+main = do
+  let
+    Just catalog@Catalog{..} = loadCatalog (LBS.fromStrict catalogJson)
+    visData = buildVisData catalog
+
+    timelineData = DL.zip [0.. ] (hsToJs <$> visData)
+  persistState <- jsToHs <$> getCookie
+  log $ show (hsToJs persistState)
+  let state = maybe M.empty (fromPersistState screeningMap) persistState
+  chan <- newTBMChanIO 5
+  setupHandlers catalog chan
+  startSchedulerLoop chan catalog (redraw catalog) state
+  mapM_ (uncurry (renderDayTimeline (DL.length timelineData))) timelineData
   setEventHandlers
   postInit
+  turnOffSpinner
 

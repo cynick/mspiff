@@ -233,4 +233,6 @@ data Command
   | RemoveFilm Screening
   | ShowBlurb Screening
   | Clear
+  | Redraw
   deriving Show
+

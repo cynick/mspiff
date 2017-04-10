@@ -8,7 +8,7 @@ var Mspiff = (function () {
     return $(sid);
   }
 
-  function renderDayTimeline(id,json) {
+  function renderDayTimeline(count,id,json) {
     var data = JSON.parse(json)
     var node = document.createElement( 'div' )
 
@@ -20,6 +20,12 @@ var Mspiff = (function () {
                          , new vis.DataSet(data.groups)
                          , data.options
                        )
+    if ( id +1 == count ) {
+      timeline.on('changed', function () {
+        console.log( "invoke redraw" )
+        redraw()
+      })
+    }
     var schedule = document.getElementById( 'schedule' )
     schedule.appendChild(node)
   }

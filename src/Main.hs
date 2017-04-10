@@ -27,6 +27,7 @@ import Data.Text.Lazy.Encoding
 import Data.FileEmbed
 import Data.Default
 import Data.Monoid
+import Data.Tuple
 import Data.JSString hiding (find)
 import JavaScript.JQuery
 import JavaScript.JQuery.Internal
@@ -124,19 +125,32 @@ redraw _ old new = do
         RuledOut -> "darkgrey"
         Impossible -> "red"
         _ -> "blue"
+      setPinStatus pinned screening
     updateOld ms@MarkedScreening{..} =
        when ( ms `notElem` newMS ) $ do
         setColor screening "rgb(212,221,246)"
         hideControlsFor (idFor screening)
-        resetPin screening
+        setPinStatus Unpinned screening
     nodeFor s = select (idFor s) >>= parent >>= parent
     setColor s c = nodeFor s >>= setCss "background-color" c >> return ()
 
 findScreening = M.lookup . fromJSInt
 
-resetPin :: Screening -> IO ()
-resetPin s =
-  select (idFor s) >>= find ("a > .fa-circle") >>= removeClass("fa-circle") >>= addClass("fa-circle-o") >> return ()
+setPinStatus :: Pinned -> Screening -> IO ()
+setPinStatus pinned s = do
+  let
+    icon = ("fa-circle-o","fa-circle")
+    stat = ("unpinned","pinned")
+    ((oldIcon, newIcon),(oldStat,newStat),title) =
+      if pinned == Pinned
+        then (icon,stat,"Unpin Screening")
+        else (swap icon, swap stat, "Pin Screening")
+
+  el <- find ".pin-screening" =<< select (idFor s)
+  setAttr "title" title el >>= removeClass oldStat >>= addClass newStat
+  find "a .fa" el >>= removeClass oldIcon >>= addClass newIcon
+
+  return ()
 
 showBlurbFor :: Film -> IO ()
 showBlurbFor film = do

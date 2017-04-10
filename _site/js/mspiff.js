@@ -57,14 +57,8 @@ var Mspiff = (function () {
           function () {
             var sid = getSidFrom($(this).parents('.screening'))
             if ($(this).hasClass( 'unpinned')) {
-              $(this).attr( 'title', 'Pin Screening' )
-              $(this).toggleClass( 'unpinned pinned' )
-              $(this).find('.fa').toggleClass( 'fa-circle-o fa-circle')
               pinScreening( sid )
             } else if ( $(this).hasClass( 'pinned' ) ) {
-              $(this).attr( 'title', 'Unpin Screening' )
-              $(this).toggleClass( 'pinned unpinned' )
-              $(this).find('.fa').toggleClass( 'fa-circle-o fa-circle')
               unPinScreening( sid )
             }
             return false;

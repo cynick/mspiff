@@ -12,6 +12,9 @@ import Data.Maybe
 import Data.Void
 import Data.Conduit.TMChan
 import Control.Concurrent
+import Control.Concurrent.STM
+import Control.Concurrent.STM.TMVar
+import Control.Exception.Base
 import Control.Monad.State
 import Data.Conduit as C
 import qualified Data.Conduit.Lift as C
@@ -85,11 +88,11 @@ viewableScheduleFor ::
   ScheduleState ->
   (ScheduleState, Maybe ViewableSchedule, [Film])
 viewableScheduleFor cat st =
-  (st, Schedule <$> schedule, join $ maybeToList filmsMissed)
+  (st, schedule, join $ maybeToList filmsMissed)
   where
     schedule = listToMaybe schedules
     filmsMissed = filmsNotInSchedule cat `fmap` schedule
-    schedules = filter (not . null) . filter disjoint . sequence $ lists
+    schedules = viewableSchedulesForScreenings lists
     screeningListFor screeningGroup =
       [screening ms | ms <- screeningGroup, status ms `elem` schedulable]
 
@@ -101,6 +104,26 @@ viewableSchedulesFor fs =
   filter (not . null) .
   filter disjoint .
   sequence $ screeningListsFor fs
+
+viewableSchedulesForScreenings :: [[Screening]] -> [ViewableSchedule]
+viewableSchedulesForScreenings list =
+  map Schedule $ filter (not . null) $ DL.concat $ reduce start
+  where
+    f = DL.foldr ((:) . g) []
+    g :: [[[Screening]]] -> [[Screening]]
+    g = filter (not . null) . fmap stitch . sequence
+    stitch [x] = if disjoint x then x else []
+    stitch [x,y] =
+      let r = (x++y)
+      in if disjointLists x y
+           then r
+           else []
+    stitch _ = error "expected to be stitching only lists of one or two elements"
+    start = (filter disjoint . sequence) <$> chunksOf 2 list
+    reduce :: [[[Screening]]] -> [[[Screening]]]
+    reduce [] = []
+    reduce [x] = [x]
+    reduce xs = reduce (f (chunksOf 2 xs))
 
 viewableSchedulesFor' :: [Film] -> [ViewableSchedule]
 viewableSchedulesFor' fs = map Schedule $ filter (not.null) $ DL.concat $ reduce start
@@ -204,51 +227,64 @@ updateState st = go
 data LoopState = LoopState
   { st :: ScheduleState
   , tid :: Maybe ThreadId
-  , mvar :: MVar ScheduleState
+  , tvar :: TMVar ScheduleState
   }
 
 runScheduler ::
   Catalog ->
-  ScheduleState ->
-  MVar ScheduleState ->
   (ScheduleState -> ScheduleState -> IO ()) ->
+  (IO (), IO ()) ->
+  TMVar ScheduleState ->
   IO ()
-runScheduler cat st mvar redraw = do
-  let
-    (st', vs, missed) = viewableScheduleFor cat st
-    st'' = maybe st' (foldr addScreening st' . scheduleScreenings) vs
---  redraw st st''
-  putMVar mvar st''
+runScheduler cat redraw startEnd tvar =
+  uncurry bracket_ startEnd $ do
+    (st,st') <- atomically $ do
+      st <- takeTMVar tvar
+      let
+        (st', vs, missed) = viewableScheduleFor cat st
+        st'' = maybe st' (foldr addScreening st' . scheduleScreenings) vs
+      putTMVar tvar st''
+      return (st, st'')
+    redraw st st'
 
 processCommand ::
   (Monad m, MonadIO m) =>
   Catalog ->
   (ScheduleState -> ScheduleState -> IO ()) ->
+  (IO (), IO ()) ->
   LoopState ->
   C.ConduitM Command Void m ()
-processCommand cat redraw orig = C.evalStateC orig $ C.awaitForever $ \cmd -> do
+processCommand cat redraw startEnd orig = C.evalStateC orig $ C.awaitForever $ \cmd -> do
   LoopState{..} <- get
-  let st' = updateState st cmd
-  st'' <- liftIO $ do
-    redraw st st'
-    ret <- tryTakeMVar mvar
-    when (st /= st') $ maybe (return ()) killThread tid
-    return ret
-  forM_ st'' $ liftIO . redraw st'
-  tid' <- liftIO $ do
-    void (tryTakeMVar mvar)
---    forkIO $ runScheduler cat st' mvar redraw
-  put (LoopState (fromMaybe st' st'') tid mvar)
+  {- At this point, there are two scenarios.
+   a) A scheduler thread is running.
+        We kill it, as any result it comes up with will be stale.
+   b) A scheduler thread is *not* running.
+        We check the tvar for an update ScheduleState
+        If there's something there, we use it as the argument to updateState.
+  -}
+  let
+    maybeKillThread = liftIO . maybe (return ()) killThread
+  maybeKillThread tid
+  st'' <- liftIO $ atomically $ do
+    st' <- fromMaybe st <$> tryTakeTMVar tvar
+    let new = updateState st' cmd
+    putTMVar tvar new
+    return new
+  liftIO $ redraw st st''
+  tid' <- liftIO $ forkIO $ runScheduler cat redraw startEnd tvar
+  put (LoopState st'' (Just tid') tvar)
 
 startSchedulerLoop ::
   TBMChan Command ->
   Catalog ->
   (ScheduleState -> ScheduleState -> IO ()) ->
+  (IO (), IO ()) ->
   ScheduleState ->
   IO ThreadId
-startSchedulerLoop chan catalog redraw orig = do
-  mvar <- newEmptyMVar
-  let st = LoopState orig Nothing mvar
-  forkIO $ sourceTBMChan chan $$ processCommand catalog redraw st
+startSchedulerLoop chan catalog redraw startEnd orig = do
+  tvar <- newEmptyTMVarIO
+  let st = LoopState orig Nothing tvar
+  forkIO $ sourceTBMChan chan $$ processCommand catalog redraw startEnd st
 
 

@@ -96,10 +96,18 @@ foreign import javascript unsafe "Mspiff.showControlsFor($1)"
 foreign import javascript unsafe "Mspiff.hideControlsFor($1)"
  hideControlsFor :: JSString -> IO ()
 
+setSpinner visibility =
+  select ".loading" >>= setCss "visibility" visibility >> return ()
+
 turnOffSpinner :: IO ()
-turnOffSpinner = do
-  node <- select ".loading"
-  void $ setCss "visibility" "hidden" node
+turnOffSpinner = setSpinner "hidden"
+
+turnOnSpinner :: IO ()
+turnOnSpinner = setSpinner "visible"
+
+spinBracket =
+  ( log "SCHEDULER START" >> turnOnSpinner
+  , turnOffSpinner >> log "SCHEDULER DONE")
 
 log :: String -> IO ()
 log x = log_ $ toJSString ("HS: " <> x)
@@ -237,7 +245,7 @@ main = do
   let state = maybe M.empty (fromPersistState screeningMap) persistState
   chan <- newTBMChanIO 5
   setupHandlers catalog chan
-  startSchedulerLoop chan catalog (redraw catalog) state
+  startSchedulerLoop chan catalog (redraw catalog) spinBracket state
   mapM_ (uncurry (renderDayTimeline (DL.length timelineData))) timelineData
   setEventHandlers
   postInit

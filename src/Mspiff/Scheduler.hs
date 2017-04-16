@@ -91,7 +91,7 @@ viewableScheduleFor cat st =
   (st, schedule, join $ maybeToList filmsMissed)
   where
     schedule = listToMaybe schedules
-    filmsMissed = filmsNotInSchedule cat `fmap` schedule
+    filmsMissed = filmsNotInSchedule cat . scheduleScreenings <$> schedule
     schedules = viewableSchedulesForScreenings lists
     screeningListFor screeningGroup =
       [screening ms | ms <- screeningGroup, status ms `elem` schedulable]

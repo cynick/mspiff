@@ -1,4 +1,9 @@
 
+[class^="icon-"], [class*=" icon-"] {
+  display: inline-block;
+  width: 100%;
+}
+
 .loading {
     visibility: visible;
 }
@@ -11,28 +16,6 @@ noscript {
     vertical-align: middle;
     text-align: center;
 }
-
-/*
-.icon-bar {
-  width: 25%;
-  height: 25%;
-  background-color: #555; /* Dark-grey background */
-  overflow: auto; /* Overflow due to float */
-  position:absolute;
-  right:0px;
-}
-
-.icon-bar a {
-  float: left;  /*Float links side by side */
-  text-align: center; /* Center-align text */
-  width: 25%;
-  padding: 12px 0; /* Some top and bottom padding */
-  transition: all 0.3s ease; /* Add transition for hover effects */
-  color: white; /* White text color */
-  font-size: 10px;
-}
-
-*/
 
 .vis-item {
   font-size: 12px;
@@ -60,30 +43,41 @@ noscript {
     visibility: hidden;
 }
 
-.control-left {
-    float: left;
-    width: 25%;
-}
-
 .ruleout-screening {
     float: left;
-    width: 25%;
+    width: 2vw;
+    height: 2vw;
     border:1px solid black;
+}
+
+.ruleout-screening a {
+    text-align: center;
 }
 
 .pin-screening {
     float: left;
-    width: 25%;
+    width: 2vw;
+    height: 2vw;
     border:1px solid black;
 }
 
-.control-right {
+.pin-screening a {
+    text-align: center;
+}
+
+.screening-status {
     float: left;
-    width: 25%;
+    width: 2vw;
+    height: 2vw;
+    padding-left: 2vw;
+    border:1px solid black;
+    background-color: green;
 }
 
 .remove-film {
-    position:absolute; top:0; right:0;
+    position:absolute;
+    top:0;
+    right:0;
 }
 
 .fa-times {

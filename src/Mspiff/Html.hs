@@ -29,16 +29,12 @@ renderScreening s name =
     div_ [class_ "film-title"] (toHtml name)
     div_ [class_ "control remove-film"] (a_ [href_ "#"] $ icon "fa-times")
     div_ [] $ do
-      controlLeft
       remove
       pin
-      controlRight
+      screeningStatus
 
 icon :: T.Text -> Html ()
 icon c = i_ [class_ ("fa icon-resize-small" <> " " <> c)] ""
-
-controlLeft :: Html ()
-controlLeft = div_ [class_ "control-left"] (return ())
 
 remove :: Html ()
 remove = div_ attrs (a_ [href_ "#"] $ icon "fa-minus")
@@ -56,8 +52,8 @@ pin = div_ attrs (a_ [href_ "#"] $ icon "fa-circle-o")
       , at "title" "Pin Screening"
       ]
 
-controlRight :: Html ()
-controlRight = div_ [class_ "control-right"] (return ())
+screeningStatus :: Html ()
+screeningStatus = div_ [class_ "screening-status control"] (return ())
 
 info :: Html ()
 info = div_ [class_ "screening-info"] (a_ [href_ "#"] $ icon "fa-info")

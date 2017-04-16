@@ -120,8 +120,8 @@ redraw _ old new = do
   mapM_ updateOld oldMS
   mapM_ updateNew newMS
   setCookie (hsToJs (toPersistState new))
-  log $ "OLD: " ++ show (screeningId . screening <$> oldMS)
-  log $ "NEW: " ++ show (screeningId . screening <$> newMS)
+  log $ "OLD: " ++ show ((status &&& (screeningId . screening)) <$> oldMS)
+  log $ "NEW: " ++ show ((status &&& (screeningId . screening)) <$> newMS)
   where
     newMS = DL.sort $ join (M.elems new)
     oldMS = DL.sort $ join (M.elems old)
@@ -139,8 +139,8 @@ redraw _ old new = do
         setColor screening "rgb(212,221,246)"
         hideControlsFor (idFor screening)
         setPinStatus Unpinned screening
-    nodeFor s = select (idFor s) >>= parent >>= parent
-    setColor s c = nodeFor s >>= setCss "background-color" c >> return ()
+    statusNodeFor s = select (idFor s <> " .screening-status")
+    setColor s c = statusNodeFor s >>= setCss "background-color" c >> return ()
 
 findScreening = M.lookup . fromJSInt
 

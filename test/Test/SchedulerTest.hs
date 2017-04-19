@@ -128,6 +128,18 @@ tests' =
        status <$> sg2 @?= [OtherScheduled, OtherScheduled]
        pinned <$> sg1 @?= [Pinned,Unpinned, Unpinned]
        pinned <$> sg2 @?= [Unpinned, Unpinned]
+    , "testAdd2RuleOut1"  ~: do
+       let (sg1:sg2:_) = M.elems (addScreening o1 (ruleOutScreening s1 (addScreening o1 (addScreening s1 M.empty))))
+       status <$> sg1 @?= [Scheduled, OtherScheduled, OtherScheduled]
+       status <$> sg2 @?= [RuledOut, OtherScheduled]
+       pinned <$> sg1 @?= [Unpinned, Unpinned, Unpinned]
+       pinned <$> sg2 @?= [Unpinned, Unpinned]
+    , "testAdd2RuleOut1Pin2"  ~: do
+       let (sg1:sg2:_) = M.elems (pinScreening o1 (ruleOutScreening s1 (addScreening o1 (addScreening s1 M.empty))))
+       status <$> sg1 @?= [Scheduled, OtherPinned, OtherPinned]
+       status <$> sg2 @?= [RuledOut, OtherScheduled]
+       pinned <$> sg1 @?= [Pinned, Unpinned, Unpinned]
+       pinned <$> sg2 @?= [Unpinned, Unpinned]
     , "testPin<"  ~: do
        let (sg1:_) = M.elems (pinScreening s1 (addScreening s1 M.empty))
        status <$> sg1 @?= [Scheduled, OtherPinned]
@@ -146,7 +158,13 @@ tests' =
        let (sg1:_) = M.elems (pinScreening s1' (addScreening s1 M.empty))
        status <$> sg1 @?= [OtherPinned, Scheduled]
        pinned <$> sg1 @?= [Unpinned, Pinned]
-    , "testPinUnpinOverlapping"  ~: do
+    , "testPinWithOverlapping" ~: do
+       let (sg1:sg2:_) = M.elems (addScreening o1 (pinScreening s1 (addScreening s1 M.empty)))
+       status <$> sg1 @?= [OtherScheduled, OtherScheduled, OtherScheduled]
+       pinned <$> sg1 @?= [Unpinned, Unpinned, Unpinned]
+       status <$> sg2 @?= [Scheduled, OtherPinned]
+       pinned <$> sg2 @?= [Pinned, Unpinned]
+    , "testPinUnpinOverlapping" ~: do
        let (sg1:sg2:_) = M.elems (pinScreening s1 (pinScreening o1 (addScreening o1 (addScreening s1 M.empty))))
        status <$> sg1 @?= [OtherScheduled, OtherScheduled, OtherScheduled]
        pinned <$> sg1 @?= [Unpinned, Unpinned, Unpinned]

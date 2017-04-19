@@ -41,21 +41,22 @@ addScreening s st = M.map (adjustOverlap <$>) (M.insertWith adjustGroup k v st)
     adjustGroup _ = fmap f
       where
         f m@MarkedScreening{..}
-          | screening == s = m { status = stat }
           | screening /= s && status /= RuledOut = m { status = OtherScheduled }
+          | screening == s = m { status = stat }
           | otherwise = m
     pinnedOverlappingExist = not (M.null (M.filter (any intersecting) st))
       where
-        intersecting MarkedScreening{..} = screening `elem` overlapping s
+        intersecting MarkedScreening{..} =
+          screening `elem` overlapping s && pinned == Pinned
     stat
       | pinnedOverlappingExist = OtherScheduled
       | otherwise = Scheduled
     adjustOverlap m@MarkedScreening{..}
-      | screening `elem` overlapping s && pinned == Unpinned =
+      | screening `elem` overlapping s && pinned == Unpinned && status /= RuledOut =
           m { status = OtherScheduled }
       | otherwise = m
 
-    ms = MarkedScreening Scheduled Unpinned
+    ms = MarkedScreening stat Unpinned
     ms' = MarkedScreening OtherScheduled Unpinned
 
 ruleOutScreening ::
@@ -79,8 +80,24 @@ pinScreening s st = DL.foldr unPinScreening adjusted (overlapping s)
     adjusted = M.adjust (fmap f) (scFilmId s) st
     f ms = if screening ms == s then pin ms else unpin ms
     pin ms = ms { pinned = Pinned, status = Scheduled }
-    unpin ms@(MarkedScreening RuledOut _ _) = ms
-    unpin ms = ms { status = OtherPinned, pinned = Unpinned }
+
+    unpin m@MarkedScreening{..}
+      | status == RuledOut = m { pinned = Unpinned }
+      | otherwise = m { status = OtherPinned, pinned = Unpinned }
+
+unPinScreening ::
+  Screening ->
+  ScheduleState ->
+  ScheduleState
+unPinScreening s = M.adjust (fmap f) (scFilmId s)
+  where
+    f ms = if screening ms == s then unpin ms else other ms
+    unpin m@MarkedScreening{..}
+      | status == Scheduled = m { status = OtherScheduled, pinned = Unpinned }
+      | otherwise = m { pinned = Unpinned }
+    other m@MarkedScreening{..}
+      | status == RuledOut = m { pinned = Unpinned }
+      | otherwise = m { status = OtherScheduled, pinned = Unpinned }
 
 scheduleScreening ::
   Screening ->
@@ -93,18 +110,6 @@ scheduleScreening s = M.adjust (fmap f) (scFilmId s)
     other ms@(MarkedScreening RuledOut _ _) = ms
     other ms =
       ms { status = if status ms == OtherPinned then status ms else OtherScheduled }
-
-unPinScreening ::
-  Screening ->
-  ScheduleState ->
-  ScheduleState
-unPinScreening s = M.adjust (fmap f) (scFilmId s)
-  where
-    f ms = if screening ms == s then unpin ms else other ms
-    unpin ms = ms { status = OtherScheduled, pinned = Unpinned }
-    other ms@(MarkedScreening RuledOut _ _) = ms { pinned = Unpinned }
-    other ms = ms { status = OtherScheduled }
-
 
 schedulable :: [ScreeningStatus]
 schedulable = [Scheduled,OtherScheduled]

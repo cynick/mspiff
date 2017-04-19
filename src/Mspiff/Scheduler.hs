@@ -23,6 +23,7 @@ import Mspiff.Model
 import Mspiff.ModelUtil
 
 type ScreeningGroup = [MarkedScreening]
+
 mkScreeningGroup ::
   Screening ->
   (Screening -> MarkedScreening) ->
@@ -34,9 +35,26 @@ addScreening ::
   Screening ->
   ScheduleState ->
   ScheduleState
-addScreening s = M.insert k v
+addScreening s st = M.map (adjustOverlap <$>) (M.insertWith adjustGroup k v st)
   where
     (k,v) = (scFilmId s, mkScreeningGroup s ms ms')
+    adjustGroup _ = fmap f
+      where
+        f m@MarkedScreening{..}
+          | screening == s = m { status = stat }
+          | screening /= s && status /= RuledOut = m { status = OtherScheduled }
+          | otherwise = m
+    pinnedOverlappingExist = not (M.null (M.filter (any intersecting) st))
+      where
+        intersecting MarkedScreening{..} = screening `elem` overlapping s
+    stat
+      | pinnedOverlappingExist = OtherScheduled
+      | otherwise = Scheduled
+    adjustOverlap m@MarkedScreening{..}
+      | screening `elem` overlapping s && pinned == Unpinned =
+          m { status = OtherScheduled }
+      | otherwise = m
+
     ms = MarkedScreening Scheduled Unpinned
     ms' = MarkedScreening OtherScheduled Unpinned
 
@@ -44,22 +62,10 @@ ruleOutScreening ::
   Screening ->
   ScheduleState ->
   ScheduleState
-ruleOutScreening s = M.insertWith f k v
+ruleOutScreening s = M.adjust (fmap f) (scFilmId s)
   where
-    (k,v) = (scFilmId s, mkScreeningGroup s ms ms')
-    ms = MarkedScreening RuledOut Unpinned
-    ms' = MarkedScreening Scheduled Unpinned
-
-    -- If any other screening was already ruled out, we leave it that
-    -- way.
-
-    merge [] _ a = DL.sort a
-    merge _ [] a = DL.sort a
-    merge (x:xs) (y:ys) a
-      | screening x == s = merge xs ys (ms s : a)
-      | isRuledOut y = merge xs ys (y : a)
-      | otherwise = merge xs ys (ms' (screening y) : a)
-    f new old = merge new old []
+    f ms = if screening ms == s then ruleout ms else ms
+    ruleout ms = ms { status = RuledOut, pinned = Unpinned }
 
 removeFilm :: Screening -> ScheduleState -> ScheduleState
 removeFilm = M.delete . scFilmId
@@ -68,17 +74,37 @@ pinScreening ::
   Screening ->
   ScheduleState ->
   ScheduleState
-pinScreening s = M.insert k v
+pinScreening s st = DL.foldr unPinScreening adjusted (overlapping s)
   where
-    (k,v) = (scFilmId s, mkScreeningGroup s ms ms')
-    ms = MarkedScreening Scheduled Pinned
-    ms' = MarkedScreening RuledOut Unpinned
+    adjusted = M.adjust (fmap f) (scFilmId s) st
+    f ms = if screening ms == s then pin ms else unpin ms
+    pin ms = ms { pinned = Pinned, status = Scheduled }
+    unpin ms@(MarkedScreening RuledOut _ _) = ms
+    unpin ms = ms { status = OtherPinned, pinned = Unpinned }
+
+scheduleScreening ::
+  Screening ->
+  ScheduleState ->
+  ScheduleState
+scheduleScreening s = M.adjust (fmap f) (scFilmId s)
+  where
+    f ms = if screening ms == s then schedule ms else other ms
+    schedule ms = ms { status = Scheduled }
+    other ms@(MarkedScreening RuledOut _ _) = ms
+    other ms =
+      ms { status = if status ms == OtherPinned then status ms else OtherScheduled }
 
 unPinScreening ::
   Screening ->
   ScheduleState ->
   ScheduleState
-unPinScreening = addScreening
+unPinScreening s = M.adjust (fmap f) (scFilmId s)
+  where
+    f ms = if screening ms == s then unpin ms else other ms
+    unpin ms = ms { status = OtherScheduled, pinned = Unpinned }
+    other ms@(MarkedScreening RuledOut _ _) = ms { pinned = Unpinned }
+    other ms = ms { status = OtherScheduled }
+
 
 schedulable :: [ScreeningStatus]
 schedulable = [Scheduled,OtherScheduled]
@@ -238,11 +264,12 @@ runScheduler ::
   IO ()
 runScheduler cat redraw startEnd tvar =
   uncurry bracket_ startEnd $ do
+    threadDelay 3000000
     (st,st') <- atomically $ do
       st <- takeTMVar tvar
       let
         (st', vs, missed) = viewableScheduleFor cat st
-        st'' = maybe st' (foldr addScreening st' . scheduleScreenings) vs
+        st'' = maybe st' (foldr scheduleScreening st' . scheduleScreenings) vs
       putTMVar tvar st''
       return (st, st'')
     redraw st st'

@@ -133,15 +133,25 @@ instance FromJSON Pinned where
   parseJSON _ = error "invalid pinned json"
 
 data ScreeningStatus =
-  Unscheduled | Scheduled | Impossible | RuledOut | OtherScheduled
-  deriving (Show, Read, Eq, Bounded, Enum, Ord)
+  Unscheduled | Scheduled | Impossible | RuledOut | OtherPinned | OtherScheduled
+  deriving (Eq, Bounded, Enum, Ord)
+
+instance Show ScreeningStatus where
+  show Unscheduled = "u"
+  show Scheduled = "s"
+  show Impossible = "i"
+  show RuledOut = "r"
+  show OtherPinned = "n"
+  show OtherScheduled = "o"
+
 
 instance ToJSON ScreeningStatus where
   toJSON Unscheduled = Number 0
   toJSON Scheduled = Number 1
   toJSON Impossible = Number 2
   toJSON RuledOut = Number 3
-  toJSON OtherScheduled = Number 4
+  toJSON OtherPinned = Number 4
+  toJSON OtherScheduled = Number 5
 
 instance FromJSON ScreeningStatus where
   parseJSON (Number n) =
@@ -150,7 +160,8 @@ instance FromJSON ScreeningStatus where
       1 -> Scheduled
       2 -> Impossible
       3 -> RuledOut
-      4 -> OtherScheduled
+      4 -> OtherPinned
+      5 -> OtherScheduled
       _ -> error "unrecognized screening status"
   parseJSON _ = error "invalid screening status json"
 
@@ -159,7 +170,15 @@ data MarkedScreening = MarkedScreening
   , pinned :: Pinned
   , screening :: Screening
   }
-  deriving Show
+
+instance Show MarkedScreening where
+  show MarkedScreening{..} =
+    concat [ show (screeningId screening)
+           , "("
+           , show status
+           , if pinned == Pinned then "p" else ""
+           , ")"
+           ]
 
 instance Eq MarkedScreening where
   a == b = screening a == screening b

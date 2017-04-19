@@ -12,9 +12,9 @@ import Test.TestUtil
 
 s2,s3,s4,s5 :: [Screening]
 s2 = fs <$> [11,38]
-s3 = fs <$> [147,277,330]
-s4 = fs <$> [42,272,287,299]
-s5 = fs <$> [182,209,249,278,301]
+s3 = fs <$> [7,150,319]
+s4 = fs <$> [40,146,222,348]
+s5 = fs <$> [183,211,251,280,303]
 
 testCyclicOther :: [Screening] -> IO ()
 testCyclicOther xs = do

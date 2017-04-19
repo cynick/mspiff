@@ -120,8 +120,8 @@ redraw _ old new = do
   mapM_ updateOld oldMS
   mapM_ updateNew newMS
   setCookie (hsToJs (toPersistState new))
-  log $ "OLD: " ++ show ((status &&& (screeningId . screening)) <$> oldMS)
-  log $ "NEW: " ++ show ((status &&& (screeningId . screening)) <$> newMS)
+  log $ "OLD: " ++ show oldMS
+  log $ "NEW: " ++ show newMS
   where
     newMS = DL.sort $ join (M.elems new)
     oldMS = DL.sort $ join (M.elems old)
@@ -131,6 +131,7 @@ redraw _ old new = do
         Scheduled -> "green"
         OtherScheduled -> "orange"
         RuledOut -> "darkgrey"
+        OtherPinned -> "lightgrey"
         Impossible -> "red"
         _ -> "blue"
       setPinStatus pinned screening

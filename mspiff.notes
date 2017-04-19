@@ -123,3 +123,10 @@ In Haskell:
  another thread reads the mvar and kicks off another
    thread to perform the update.
 
+
+If user rules out a film, that should stick.
+If a user pins a film, thus ruling out the others, that should not
+stick
+=> need separate RuledOut states
+  ANSWER: RuledOut vs. OtherPinned
+

@@ -269,7 +269,6 @@ runScheduler ::
   IO ()
 runScheduler cat redraw startEnd tvar =
   uncurry bracket_ startEnd $ do
-    threadDelay 3000000
     (st,st') <- atomically $ do
       st <- takeTMVar tvar
       let

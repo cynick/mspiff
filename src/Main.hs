@@ -127,21 +127,36 @@ redraw _ old new = do
     oldMS = DL.sort $ join (M.elems old)
     updateNew ms@MarkedScreening{..} = do
       showControlsFor (idFor screening)
-      setColor screening $ case status of
-        Scheduled -> "green"
-        OtherScheduled -> "orange"
-        RuledOut -> "darkgrey"
-        OtherPinned -> "lightgrey"
-        Impossible -> "red"
-        _ -> "blue"
+      setScreeningStatus screening status
       setPinStatus pinned screening
     updateOld ms@MarkedScreening{..} =
        when ( ms `notElem` newMS ) $ do
-        setColor screening "rgb(212,221,246)"
         hideControlsFor (idFor screening)
         setPinStatus Unpinned screening
-    statusNodeFor s = select (idFor s <> " .screening-status")
-    setColor s c = statusNodeFor s >>= setCss "background-color" c >> return ()
+    setScreeningStatus screening stat = do
+      node <- select (idFor screening <> " .screening-status")
+      setStatusColor stat node
+      setStatusTitle stat node
+    setStatusColor status = setCss "background-color" color
+      where
+        color =
+          case status of
+            Unscheduled -> "blue"
+            Scheduled -> "green"
+            Impossible -> "red"
+            RuledOut -> "darkgrey"
+            OtherPinned -> "lightgrey"
+            OtherScheduled -> "orange"
+    setStatusTitle status = setAttr "title" title
+      where
+        title =
+          case status of
+            Unscheduled -> "Unscheduled"
+            Scheduled -> "Scheduled"
+            Impossible -> "Screening is Impossible"
+            RuledOut -> "Ruled Out"
+            OtherPinned -> "Other Screening is Pinned"
+            OtherScheduled -> "Other Screening is Scheduled"
 
 findScreening = M.lookup . fromJSInt
 

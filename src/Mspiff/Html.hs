@@ -53,7 +53,12 @@ pin = div_ attrs (a_ [href_ "#"] $ icon "fa-circle-o")
       ]
 
 screeningStatus :: Html ()
-screeningStatus = div_ [class_ "screening-status control"] (return ())
+screeningStatus = div_ attrs (return ())
+  where
+    attrs =
+      [ class_ "screening-status control"
+      , at "title" ""
+      ]
 
 info :: Html ()
 info = div_ [class_ "screening-info"] (a_ [href_ "#"] $ icon "fa-info")

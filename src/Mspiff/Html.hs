@@ -29,9 +29,9 @@ renderScreening s name =
     div_ [class_ "film-title"] (toHtml name)
     div_ [class_ "control remove-film"] (a_ [href_ "#"] $ icon "fa-times")
     div_ [] $ do
-      remove
-      pin
       screeningStatus
+      pin
+      remove
 
 icon :: T.Text -> Html ()
 icon c = i_ [class_ ("fa icon-resize-small" <> " " <> c)] ""

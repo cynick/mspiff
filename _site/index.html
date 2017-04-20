@@ -39,70 +39,27 @@
   </head>
   <body>
     <div class="navbar navbar-default navbar-fixed-top">
-      <div class="container">
-        <div class="navbar-header">
-          <a class="navbar-brand" href="http://local.mspiffy.com">MSPIFFy</a>
-        </div>
+      <div class="navbar-header">
+        <a class="navbar-brand" href="http://local.mspiffy.com">MSPIFFy</a>
+      </div>
+      <div class="clear-all navbar-left">
+        <button type="button"
+                class="btn btn-secondary">
+          Start Over
+        </button>
+      </div>
+      <div class="loading navbar-right">
+        <i class="fa fa-cog fa-spin fa-4x fa-fw"></i>
+        <span class="sr-only">Loading...
+        </span>
       </div>
     </div>
-    <div class="container">
-      <div class="row">
-        <div class="col-md-2">
-          <div class="sidebar-nav-fixed affix">
-            <div class="well">
-              <ul class="nav ">
-                <li>
-                  <div class="btn-group-vertical">
-                    <div>
-                      <button type="button"
-                              class="btn btn-secondary clear-all">
-                        Start Over
-                      </button>
-                    </div>
-                  </div>
-                </li>
-              </ul>
-            </div>
-            <!--/.well -->
-            <div class="loading">
-              <i class="fa fa-cog fa-spin fa-4x fa-fw"></i>
-              <span class="sr-only">Loading...
-              </span>
-            </div>
-          </div>
-          <!--/sidebar-nav-fixed -->
-        </div>
-
-        <div class="col-md-10">
-          <noscript>
-            <h1> Sorry, but this really won't work at all
-              if you have JavaScript turned off!
-            </h1>
-          </noscript>
-          <div id="schedule">
-          </div>
-<!--        </div>
-      </div>
--->
-    </div>
-
-    <div id="blurb-modal" class="modal fade">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-body">
-            <div id="blurb-image">
-            </div>
-            <div id="blurb-text">
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button"
-                    class="btn btn-default"
-                    data-dismiss="modal">Close
-            </button>
-          </div>
-        </div>
-      </div>
+    <noscript>
+      <h1> Sorry, but this really won't work at all
+        if you have JavaScript turned off!
+      </h1>
+    </noscript>
+    <div id="schedule">
     </div>
 
     <div class="footer">

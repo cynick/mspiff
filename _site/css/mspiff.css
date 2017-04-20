@@ -6,10 +6,15 @@
 
 .loading {
     visibility: visible;
+    padding-right: 20px;
 }
 
 body {
     padding-top: 70px;
+}
+
+.clear-all {
+    vertical-align: middle;
 }
 
 noscript {
@@ -18,7 +23,7 @@ noscript {
 }
 
 .vis-item {
-  font-size: 12px;
+  font-size: 1vw;
 }
 
 .icon-bar a:hover {
@@ -44,7 +49,7 @@ noscript {
 }
 
 .ruleout-screening {
-    float: left;
+    float: right;
     width: 2vw;
     height: 2vw;
     border:1px solid black;
@@ -55,7 +60,7 @@ noscript {
 }
 
 .pin-screening {
-    float: left;
+    float: right;
     width: 2vw;
     height: 2vw;
     border:1px solid black;
@@ -66,7 +71,7 @@ noscript {
 }
 
 .screening-status {
-    float: left;
+    float: right;
     width: 2vw;
     height: 2vw;
     padding-left: 2vw;
@@ -80,20 +85,8 @@ noscript {
     right:0;
 }
 
-.fa-times {
+.fa {
     color: black;
-}
-
-.fa-circle-o {
-    color: black;
-}
-
-.fa-minus {
-    color: black;
-}
-
-.blurb-modal {
-    visibility: hidden;
 }
 
 .footer {

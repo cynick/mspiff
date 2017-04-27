@@ -250,7 +250,6 @@ data Command
   | Pin Screening
   | UnPin Screening
   | RemoveFilm Screening
-  | ShowBlurb Screening
   | Clear
   | Redraw
   deriving Show

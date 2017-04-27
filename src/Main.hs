@@ -57,9 +57,6 @@ foreign import javascript unsafe "Mspiff.setCookie($1)"
 foreign import javascript unsafe "Mspiff.getCookie()"
  getCookie :: IO JSString
 
-foreign import javascript unsafe "Mspiff.showBlurbModal($1,$2)"
- showBlurbModal :: JSString -> JSString -> IO ()
-
 foreign import javascript unsafe "Mspiff.postInit()"
  postInit :: IO ()
 
@@ -80,9 +77,6 @@ foreign import javascript unsafe "unPinScreening = $1"
 
 foreign import javascript unsafe "removeFilm = $1"
  setRemoveFilm :: Callback (JSVal -> IO ()) -> IO ()
-
-foreign import javascript unsafe "showBlurb = $1"
- setShowBlurb :: Callback (JSVal -> IO ()) -> IO ()
 
 foreign import javascript unsafe "clearState = $1"
  setClearState :: Callback (JSVal -> IO ()) -> IO ()
@@ -176,15 +170,6 @@ setPinStatus pinned s = do
 
   return ()
 
-showBlurbFor :: Film -> IO ()
-showBlurbFor film = do
-  blurb <- fetchBlurbFor film
-  maybe (return ()) showBlurb blurb
-  where
-    showBlurb Blurb{..} = do
-      log "SHOWING BLURB"
-      showBlurbModal (textToJSString blurbImage) (textToJSString blurbText)
-
 handleScreeningCmd ::
   (Screening -> Command) ->
   Catalog ->
@@ -199,7 +184,6 @@ handleScreeningCmd cmd cat@Catalog{..} chan sid =
   where
     ms = findScreening sid screeningMap
     sendCmd = atomically . writeTBMChan chan
-    handle (ShowBlurb s) = maybe (return ()) showBlurbFor (filmOf s)
     handle cmd = sendCmd cmd
     filmOf s = M.lookup (scFilmId s) filmMap
 
@@ -233,7 +217,6 @@ setupHandlers catalog chan = do
       , handleScreeningCmd Pin
       , handleScreeningCmd UnPin
       , handleScreeningCmd RemoveFilm
-      , handleScreeningCmd ShowBlurb
       , handleCmd Clear
       , handleCmd Redraw
       ]
@@ -243,7 +226,6 @@ setupHandlers catalog chan = do
       , setPinScreening
       , setUnPinScreening
       , setRemoveFilm
-      , setShowBlurb
       , setClearState
       , setRedraw
       ]
